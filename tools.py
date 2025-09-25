@@ -373,6 +373,8 @@ class GoogleCalendarAvailabilityTool(Tool):
         work_start_hour: int = 9,
         work_end_hour: int = 18,
     ) -> Dict[str, Any]:
+    
+        days_ahead = max(1, days_ahead)
         cal_ids = calendar_ids or ["primary"]
         tz_name = timezone or "UTC"             # <-- ...but immediately rename to avoid shadowing
         token = self.access_token
