@@ -3,15 +3,16 @@
 import os
 import json
 import uuid
-import google.generativeai as genai
 from typing import List
 from pydantic import ValidationError
+
+from litellm import acompletion  # <-- replace genai with LiteLLM
 
 from database.models import ProcessStep
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))  # <-- removed
 
 tool_string = """
 **Available Tools:**
@@ -28,17 +29,17 @@ class Planner:
     """
     def __init__(self, process_id: str):
         self.process_id = process_id
-        generation_config = {
+
+        # Minimal replacement for generation config
+        self.model_name = os.getenv("PLANNER_MODEL_NAME", os.getenv("MODEL_NAME", "gemini/gemini-2.5-flash-lite"))
+        self.gen_kwargs = {
             "temperature": 0.2,
             "top_p": 1,
-            "top_k": 1,
-            "max_output_tokens": 8192,
-            "response_mime_type": "application/json",
+            # "top_k" is provider-specific; omitted for portability
+            "max_tokens": 8192,  # maps to OpenAI-style; some providers may ignore/rename
         }
-        self.model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash", # Using your specified model
-            generation_config=generation_config
-        )
+        # Prefer JSON output when supported (OpenAI-compatible). Safe to keep; ignored by others.
+        self.response_format = {"type": "json_object"}
 
     def _get_initial_prompt(self, user_prompt: str) -> str:
         """Generates the prompt for creating the initial, optimistic plan."""
@@ -104,6 +105,7 @@ You are an expert AI problem-solving coordinator. A multi-step plan has failed. 
 
     async def generate_recovery_plan(self, original_prompt: str, history: List[str], failed_step: ProcessStep) -> List[ProcessStep]:
         """Public method to create a recovery plan."""
+        print("in recovery")
         prompt = self._get_recovery_prompt(original_prompt, history, failed_step)
         return await self._generate_plan_from_prompt(prompt)
 
@@ -111,12 +113,27 @@ You are an expert AI problem-solving coordinator. A multi-step plan has failed. 
         """Helper function to run the LLM call and map IDs, used by both public methods."""
         print(f"[{self.process_id}] Generating plan...")
         try:
-            response = await self.model.generate_content_async(prompt)
-            raw_plan_data = json.loads(response.text)
-            
+            # Replace genai.generate_content_async with LiteLLM completion
+            resp = await acompletion(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are a planner that outputs ONLY JSON arrays conforming to the requested schema."},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format=self.response_format,  # best-effort JSON mode
+                **self.gen_kwargs,
+            )
+
+            try:
+                content = resp.choices[0].message.content
+            except Exception:
+                content = resp["choices"][0]["message"]["content"]
+
+            raw_plan_data = json.loads(content)
+
             id_map = {}
             steps_with_real_ids = []
-            
+
             for temp_step_data in raw_plan_data:
                 llm_id = temp_step_data.pop('id')
                 step = ProcessStep(process_id=self.process_id, **temp_step_data)
@@ -130,12 +147,12 @@ You are an expert AI problem-solving coordinator. A multi-step plan has failed. 
                     if dep_id in id_map:
                         uuid_deps.append(id_map[dep_id])
                 step.dependencies = uuid_deps
-            
+
             print(f"[{self.process_id}] Plan generated and IDs mapped successfully.")
             return steps_with_real_ids
 
-        except (Exception) as e:
+        except Exception as e:
             print(f"[{self.process_id}] CRITICAL: Failed during planning or validation. Error: {e}")
-            if 'response' in locals():
-                print(f"LLM Output was:\n---\n{response.text}\n---")
+            if 'content' in locals():
+                print(f"LLM Output was:\n---\n{content}\n---")
             return []
