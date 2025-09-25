@@ -265,4 +265,3 @@ def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = 
 
 # if __name__ == "__main__":
 #     main()
-

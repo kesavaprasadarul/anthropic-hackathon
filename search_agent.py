@@ -28,16 +28,7 @@ def build_agent() -> CodeAgent:
 
     tools = [CombinedReservationSearchTool()]
 
-    # Strongly constrain the agent to: (1) call the tool once, (2) return JSON only.
-
     return CodeAgent(tools=tools, model=model)
-
-BASE_TASK = (
-    "You ONLY help by calling the 'search_and_reservations' tool exactly once. "
-    "Do not write explanations or code. "
-    "Return the tool's result as a JSON string. If the tool returns an array/dict, "
-    "output exactly that JSON and nothing else. "
-)
 
 def search_places(search_term: str, latitude: Optional[float] = None, longitude: Optional[float] = None) -> Dict[str, Any]:
     """
@@ -58,7 +49,10 @@ def search_places(search_term: str, latitude: Optional[float] = None, longitude:
     else:
         lat, lon = latitude, longitude
 
-    task = BASE_TASK + f"Find {search_term} near location {lat}, {lon}"
+    task = f"""You ONLY help by calling the 'search_and_reservations' tool exactly once.
+    Do not write explanations or code.
+    Return the tool's result as a JSON string. If the tool returns an array/dict,
+    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
 
     agent = build_agent()
     result = agent.run(task=task)
@@ -118,7 +112,10 @@ class PlaceSearchAgent:
         else:
             lat, lon = latitude, longitude
 
-        task = BASE_TASK + f"Find {search_term} near location {lat}, {lon}"
+        task = f"""You ONLY help by calling the 'search_and_reservations' tool exactly once.
+    Do not write explanations or code.
+    Return the tool's result as a JSON string. If the tool returns an array/dict,
+    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
 
         agent = self._get_agent()  # <-- This is where _get_agent() actually runs!
         result = agent.run(task=task)
@@ -129,37 +126,37 @@ class PlaceSearchAgent:
             return {"error": "Invalid result format", "raw_result": str(result)}
 
 
-# def main() -> None:
-#     """Debug main function for testing the search agent"""
-#     print("=== Testing PlaceSearchAgent ===")
+def main() -> None:
+    """Debug main function for testing the search agent"""
+    print("=== Testing PlaceSearchAgent ===")
     
-#     # Test with PlaceSearchAgent class
-#     agent = PlaceSearchAgent()
+    # Test with PlaceSearchAgent class
+    agent = PlaceSearchAgent()
     
-#     # Test searches
-#     search_terms = ["hairdressers", "restaurants", "dentists"]
+    # Test searches
+    search_terms = ["hairdressers", "restaurants", "dentists"]
     
-#     for term in search_terms:
-#         print(f"\n--- Searching for {term} ---")
-#         try:
-#             result = agent.search(term)
-#             print(f"Found {len(result) if isinstance(result, list) else 'N/A'} results")
-#             print(f"Result type: {type(result)}")
-#             if isinstance(result, dict) and "error" in result:
-#                 print(f"Error: {result['error']}")
-#             else:
-#                 print("Success!")
-#         except Exception as e:
-#             print(f"Exception: {e}")
+    for term in search_terms:
+        print(f"\n--- Searching for {term} ---")
+        try:
+            result = agent.search(term)
+            print(f"Found {len(result) if isinstance(result, list) else 'N/A'} results")
+            print(f"Result type: {type(result)}")
+            if isinstance(result, dict) and "error" in result:
+                print(f"Error: {result['error']}")
+            else:
+                print("Success!")
+        except Exception as e:
+            print(f"Exception: {e}")
     
-#     print("\n=== Testing search_places function ===")
+    print("\n=== Testing search_places function ===")
     
-#     # Test with standalone function
-#     try:
-#         result = search_places("gyms")
-#         print(f"Function search successful: {type(result)}")
-#     except Exception as e:
-#         print(f"Function search failed: {e}")
+    # Test with standalone function
+    try:
+        result = search_places("gyms")
+        print(f"Function search successful: {type(result)}")
+    except Exception as e:
+        print(f"Function search failed: {e}")
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
