@@ -18,6 +18,7 @@ async def mock_browser_agent(prompt: str) -> AgentOutput:
     """Mock for web scraping and form filling."""
     print(f" MOCK BROWSER AGENT: Received prompt -> '{prompt}'")
     await asyncio.sleep(2) # Simulate browser actions
+    prompt+="fail"
     if "fail" in prompt.lower():
         return AgentOutput(status="failed", error="The online reservation form is broken.")
     return AgentOutput(status="completed", result="Successfully submitted the reservation for 2 people.")
@@ -27,3 +28,9 @@ async def mock_calendar_agent(prompt: str) -> AgentOutput:
     print(f" MOCK CALENDAR AGENT: Received prompt -> '{prompt}'")
     await asyncio.sleep(1)
     return AgentOutput(status="completed", result="Calendar event has been created.")
+
+async def mock_calling_agent(prompt: str) -> AgentOutput:
+    """Mock for making phone calls."""
+    print(f" MOCK CALLING AGENT: Received prompt -> '{prompt}'")
+    await asyncio.sleep(1)
+    return AgentOutput(status="completed", result="Successfully made the call and spoke with the restaurant.")

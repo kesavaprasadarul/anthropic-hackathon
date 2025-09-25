@@ -1,14 +1,16 @@
-# main.py
+# main.py (Updated)
 
-import asyncio
+import os
 import uuid
+import asyncio
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
-# We will import our real coordinator logic here later
-# from coordinator.planner import Planner
-# from coordinator.executor import Executor
+# Import the new Planner
+from coordinator.planner import Planner
+from coordinator.executor import Executor
+from database.models import ProcessRun
 
 app = FastAPI(
     title="Butler AI Coordinator",
@@ -19,27 +21,46 @@ class UserRequest(BaseModel):
     user_id: str
     prompt: str
 
-# In-memory "database" for the hackathon to see results quickly.
-# Replace this with a real DB connection (Firestore, Supabase).
-HACKATHON_DB = {}
+# In-memory "database" for the hackathon
+HACKATHON_DB: dict[str, ProcessRun] = {}
+
 
 async def run_coordination_logic(process_id: str, user_id: str, prompt: str):
-    """
-    This is the main background task where the coordinator does its work.
-    """
     print(f"[{process_id}] Starting coordination for user '{user_id}' with prompt: '{prompt}'")
+    HACKATHON_DB[process_id].status = "running"
     
-    # 1. PLAN: Generate the step-by-step plan (will be implemented next)
-    print(f"[{process_id}] Generating plan...")
-    await asyncio.sleep(2) # Simulate planning
+    run_obj = HACKATHON_DB[process_id]
+    run_obj.status = "running"
     
-    # 2. EXECUTE: Run the plan step-by-step (will be implemented later)
-    print(f"[{process_id}] Executing plan...")
-    await asyncio.sleep(5) # Simulate execution
+    # 1. PLAN: Generate the high-level strategy
+    planner = Planner(process_id=process_id)
+    initial_steps  = await planner.generate_initial_plan(prompt)
+    
+    if not initial_steps:
+        print(f"[{process_id}] Planning failed. Aborting process.")
+        run_obj.status = "failed_butler_error"
+        return
+
+    run_obj.steps = initial_steps
+    print(f"[{process_id}] Plan Generated:")
+    for step in run_obj.steps:
+        print(f"  - Step: {step.step_name}, Tool: {step.tool_module_name}, Path: {step.path_name}, Prompt: {step.prompt_message}")
+
+    # 2. EXECUTE: Use the new "thinking" Executor to run the plan
+    executor = Executor(
+        process_id=process_id, 
+        original_prompt=prompt, 
+        run_history=run_obj.run_history
+    )
+    await executor.run(run_obj.steps) # Pass the generated plan to the executor
     
     # 3. COMPLETE
-    HACKATHON_DB[process_id]["status"] = "completed"
-    print(f"[{process_id}] Process finished successfully.")
+    if all(s.status == 'completed' for s in run_obj.steps):
+        run_obj.status = "completed"
+    else:
+        run_obj.status = "failed_butler_error"
+        
+    print(f"[{process_id}] Process finished with status: {run_obj.status}.")
 
 
 @app.post("/execute-task", status_code=202)
@@ -49,23 +70,23 @@ async def execute_task(request: UserRequest, background_tasks: BackgroundTasks):
     """
     process_id = str(uuid.uuid4())
     
-    # Create a record for this new process in our mock DB
-    HACKATHON_DB[process_id] = {
-        "process_id": process_id,
-        "user_id": request.user_id,
-        "prompt": request.prompt,
-        "status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    # Create a record for this new process using our Pydantic model
+    run = ProcessRun(
+        process_id=process_id,
+        user_id=request.user_id,
+        original_prompt=request.prompt,
+        created_at=datetime.now(timezone.utc).isoformat()
+    )
+    HACKATHON_DB[process_id] = run
     
     background_tasks.add_task(run_coordination_logic, process_id, request.user_id, request.prompt)
     
     return {"message": "Request received. Your Butler is on it!", "process_id": process_id}
 
-@app.get("/status/{process_id}")
+@app.get("/status/{process_id}", response_model=ProcessRun)
 async def get_status(process_id: str):
     """
-    Endpoint to check the status of a running process.
+    Endpoint to check the status and plan of a running process.
     """
     if process_id not in HACKATHON_DB:
         raise HTTPException(status_code=404, detail="Process ID not found.")
