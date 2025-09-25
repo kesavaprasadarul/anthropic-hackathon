@@ -1,0 +1,7 @@
+# requirements.txt
+
+fastapi
+uvicorn[standard]
+pydantic
+google-generativeai
+# or openai, if you prefer
