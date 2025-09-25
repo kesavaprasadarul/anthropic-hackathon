@@ -1,0 +1,1526 @@
+[
+    {
+        "id": "ChIJifIePKtZwokRVZ-UdRGkZzs",
+        "name": "Joe's Pizza Broadway",
+        "rating": 4.5,
+        "reviews": 23208,
+        "priceLevel": "PRICE_LEVEL_INEXPENSIVE",
+        "address": "1435 Broadway, New York, NY 10018, USA",
+        "servesVegetarianFood": true,
+        "phone": "(646) 559-4878",
+        "website": "https://www.joespizzanyc.com/",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": true,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 59,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 0,
+                        "minute": 0,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 4,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 5,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 5,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 10:00 AM – 3:00 AM",
+                "Tuesday: 10:00 AM – 3:00 AM",
+                "Wednesday: 10:00 AM – 3:00 AM",
+                "Thursday: 10:00 AM – 3:00 AM",
+                "Friday: 10:00 AM – 5:00 AM",
+                "Saturday: 10:00 AM – 5:00 AM",
+                "Sunday: 10:00 AM – 3:00 AM"
+            ],
+            "nextCloseTime": "2025-09-26T07:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJzRA7agBZwokRbSxOyEGFG5U",
+        "name": "Din Tai Fung",
+        "rating": 4.3,
+        "reviews": 1439,
+        "priceLevel": "PRICE_LEVEL_MODERATE",
+        "address": "1633 Broadway, New York, NY 10022, USA",
+        "servesVegetarianFood": true,
+        "phone": "(212) 287-9178",
+        "website": "https://dtf.com/en/locations/new-york",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": false,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 22,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 22,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 22,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 22,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 4,
+                        "hour": 22,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 10,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 10,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 11:00 AM – 10:30 PM",
+                "Tuesday: 11:00 AM – 10:30 PM",
+                "Wednesday: 11:00 AM – 10:30 PM",
+                "Thursday: 11:00 AM – 10:30 PM",
+                "Friday: 10:30 AM – 12:00 AM",
+                "Saturday: 10:00 AM – 12:00 AM",
+                "Sunday: 10:00 AM – 10:30 PM"
+            ],
+            "nextOpenTime": "2025-09-25T15:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJ_85dJlZYwokR29NPLSJngR4",
+        "name": "Ellen's Stardust Diner",
+        "rating": 4.4,
+        "reviews": 22559,
+        "priceLevel": "PRICE_LEVEL_MODERATE",
+        "address": "1650 Broadway, New York, NY 10019, USA",
+        "servesVegetarianFood": false,
+        "phone": "(212) 956-5151",
+        "website": "https://www.ellensstardustdiner.com/",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": true,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 59,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 7:00 AM – 12:00 AM",
+                "Tuesday: 7:00 AM – 12:00 AM",
+                "Wednesday: 7:00 AM – 12:00 AM",
+                "Thursday: 7:00 AM – 12:00 AM",
+                "Friday: 7:00 AM – 12:00 AM",
+                "Saturday: 7:00 AM – 12:00 AM",
+                "Sunday: 7:00 AM – 12:00 AM"
+            ],
+            "nextCloseTime": "2025-09-26T04:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJ6WooklRYwokR3qd-J59t-k0",
+        "name": "LOS TACOS No.1",
+        "rating": 4.8,
+        "reviews": 13918,
+        "priceLevel": "PRICE_LEVEL_INEXPENSIVE",
+        "address": "229 W 43rd St, New York, NY 10036, USA",
+        "servesVegetarianFood": false,
+        "phone": null,
+        "website": "http://www.lostacos1.com/",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": false,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 21,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 4,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 11:00 AM – 11:00 PM",
+                "Tuesday: 11:00 AM – 11:00 PM",
+                "Wednesday: 11:00 AM – 11:00 PM",
+                "Thursday: 11:00 AM – 11:00 PM",
+                "Friday: 11:00 AM – 11:00 PM",
+                "Saturday: 11:00 AM – 11:00 PM",
+                "Sunday: 11:00 AM – 9:00 PM"
+            ],
+            "nextOpenTime": "2025-09-25T15:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJb7P5f9FZwokR2HSsdIIDLls",
+        "name": "Raising Cane's Chicken Fingers",
+        "rating": 4.2,
+        "reviews": 2690,
+        "priceLevel": "PRICE_LEVEL_INEXPENSIVE",
+        "address": "1501 Broadway, New York, NY 10036, USA",
+        "servesVegetarianFood": false,
+        "phone": "(917) 780-4035",
+        "website": "https://locations.raisingcanes.com/ny/new-york/1501-broadway",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": true,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 59,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 0,
+                        "minute": 0,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 4,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 3,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 9:00 AM – 3:00 AM",
+                "Tuesday: 9:00 AM – 3:00 AM",
+                "Wednesday: 9:00 AM – 3:00 AM",
+                "Thursday: 9:00 AM – 3:00 AM",
+                "Friday: 9:00 AM – 3:00 AM",
+                "Saturday: 9:00 AM – 3:00 AM",
+                "Sunday: 9:00 AM – 3:00 AM"
+            ],
+            "nextCloseTime": "2025-09-26T07:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJNcZg81VYwokRIcQV-JL4Ewc",
+        "name": "Hotel Riu Plaza Manhattan Times Square",
+        "rating": 4.6,
+        "reviews": 6765,
+        "priceLevel": null,
+        "address": "145 W 47th St, New York, NY 10036, USA",
+        "servesVegetarianFood": null,
+        "phone": "(212) 706-3170",
+        "website": "https://www.riu.com/en/hotel/united-states/new-york/hotel-riu-plaza-manhattan-times-square?utm_source=google&utm_medium=organic&utm_campaign=my_business&utm_content=ZMH",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": null
+    },
+    {
+        "id": "ChIJR9So-lRYwokRX1xEjA0rChA",
+        "name": "Carmine's - Time Square",
+        "rating": 4.5,
+        "reviews": 18052,
+        "priceLevel": "PRICE_LEVEL_MODERATE",
+        "address": "200 W 44th St, New York, NY 10036, USA",
+        "servesVegetarianFood": false,
+        "phone": "(212) 221-3800",
+        "website": "https://www.carminesnyc.com/?olonwp=JjBtp_vMLk25gkYh_bnoiQ",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": false,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 11,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 11,
+                        "minute": 30,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 11:30 AM – 11:00 PM",
+                "Tuesday: 11:30 AM – 11:00 PM",
+                "Wednesday: 11:00 AM – 11:00 PM",
+                "Thursday: 11:30 AM – 12:00 AM",
+                "Friday: 11:30 AM – 12:00 AM",
+                "Saturday: 11:30 AM – 12:00 AM",
+                "Sunday: 11:30 AM – 11:00 PM"
+            ],
+            "nextOpenTime": "2025-09-25T15:30:00Z"
+        }
+    },
+    {
+        "id": "ChIJ58OtM8pZwokRbd6DT6gcVys",
+        "name": "La Grande Boucherie",
+        "rating": 4.6,
+        "reviews": 8212,
+        "priceLevel": "PRICE_LEVEL_MODERATE",
+        "address": "145 W 53rd St, New York, NY 10019, USA",
+        "servesVegetarianFood": true,
+        "phone": "(212) 510-7714",
+        "website": "https://www.boucherieus.com/",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": true,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 8,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 8,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 8,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 23,
+                        "minute": 59,
+                        "truncated": true,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 8,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 8,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 9,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 0,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 8:00 AM – 12:00 AM",
+                "Tuesday: 8:00 AM – 12:00 AM",
+                "Wednesday: 8:00 AM – 12:00 AM",
+                "Thursday: 8:00 AM – 12:00 AM",
+                "Friday: 8:00 AM – 12:00 AM",
+                "Saturday: 9:00 AM – 12:00 AM",
+                "Sunday: 9:00 AM – 12:00 AM"
+            ],
+            "nextCloseTime": "2025-09-26T04:00:00Z"
+        }
+    },
+    {
+        "id": "ChIJpY9Tg01YwokRCr_aQpDrqgk",
+        "name": "YOTEL New York Times Square",
+        "rating": 3.9,
+        "reviews": 9132,
+        "priceLevel": null,
+        "address": "570 Tenth Avenue At, W 42nd St, New York, NY 10036, USA",
+        "servesVegetarianFood": null,
+        "phone": "(646) 449-7700",
+        "website": "https://www.yotel.com/en/hotels/yotel-new-york?utm_source=Google&utm_medium=Yext_YONYC",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": null
+    },
+    {
+        "id": "ChIJEWqQDLJZwokR8K5wVBL9n6g",
+        "name": "Liberty Bagels Midtown",
+        "rating": 4.6,
+        "reviews": 4196,
+        "priceLevel": "PRICE_LEVEL_INEXPENSIVE",
+        "address": "260 W 35th St, New York, NY 10001, USA",
+        "servesVegetarianFood": null,
+        "phone": "(212) 279-1124",
+        "website": "https://libertybagels.com/",
+        "businessStatus": "OPERATIONAL",
+        "openingHours": {
+            "openNow": true,
+            "periods": [
+                {
+                    "open": {
+                        "day": 0,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    },
+                    "close": {
+                        "day": 0,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 28
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 1,
+                        "hour": 6,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    },
+                    "close": {
+                        "day": 1,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 29
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 2,
+                        "hour": 6,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    },
+                    "close": {
+                        "day": 2,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 30
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 3,
+                        "hour": 6,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    },
+                    "close": {
+                        "day": 3,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 10,
+                            "day": 1
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 4,
+                        "hour": 6,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    },
+                    "close": {
+                        "day": 4,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 25
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 5,
+                        "hour": 6,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    },
+                    "close": {
+                        "day": 5,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 26
+                        }
+                    }
+                },
+                {
+                    "open": {
+                        "day": 6,
+                        "hour": 7,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    },
+                    "close": {
+                        "day": 6,
+                        "hour": 17,
+                        "minute": 0,
+                        "date": {
+                            "year": 2025,
+                            "month": 9,
+                            "day": 27
+                        }
+                    }
+                }
+            ],
+            "weekdayDescriptions": [
+                "Monday: 6:00 AM – 5:00 PM",
+                "Tuesday: 6:00 AM – 5:00 PM",
+                "Wednesday: 6:00 AM – 5:00 PM",
+                "Thursday: 6:00 AM – 5:00 PM",
+                "Friday: 6:00 AM – 5:00 PM",
+                "Saturday: 7:00 AM – 5:00 PM",
+                "Sunday: 7:00 AM – 5:00 PM"
+            ],
+            "nextCloseTime": "2025-09-25T21:00:00Z"
+        }
+    }
+]
