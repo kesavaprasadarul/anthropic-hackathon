@@ -10,3 +10,4 @@ smolagents
 beautifulsoup4
 lxml
 # or openai, if you prefer
+

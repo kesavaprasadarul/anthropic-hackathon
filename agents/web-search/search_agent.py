@@ -28,16 +28,7 @@ def build_agent() -> CodeAgent:
 
     tools = [CombinedReservationSearchTool()]
 
-    # Strongly constrain the agent to: (1) call the tool once, (2) return JSON only.
-
     return CodeAgent(tools=tools, model=model)
-
-BASE_TASK = (
-    "You ONLY help by calling the 'search_and_reservations' tool exactly once. "
-    "Do not write explanations or code. "
-    "Return the tool's result as a JSON string. If the tool returns an array/dict, "
-    "output exactly that JSON and nothing else. "
-)
 
 def search_places(search_term: str, latitude: Optional[float] = None, longitude: Optional[float] = None) -> Dict[str, Any]:
     """
@@ -58,7 +49,10 @@ def search_places(search_term: str, latitude: Optional[float] = None, longitude:
     else:
         lat, lon = latitude, longitude
 
-    task = BASE_TASK + f"Find {search_term} near location {lat}, {lon}"
+    task = f"""You ONLY help by calling the 'search_and_reservations' tool exactly once.
+    Do not write explanations or code.
+    Return the tool's result as a JSON string. If the tool returns an array/dict,
+    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
 
     agent = build_agent()
     result = agent.run(task=task)
@@ -118,7 +112,10 @@ class PlaceSearchAgent:
         else:
             lat, lon = latitude, longitude
 
-        task = BASE_TASK + f"Find {search_term} near location {lat}, {lon}"
+        task = f"""You ONLY help by calling the 'search_and_reservations' tool exactly once.
+    Do not write explanations or code.
+    Return the tool's result as a JSON string. If the tool returns an array/dict,
+    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
 
         agent = self._get_agent()  # <-- This is where _get_agent() actually runs!
         result = agent.run(task=task)
