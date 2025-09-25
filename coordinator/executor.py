@@ -7,10 +7,9 @@ import google.generativeai as genai
 from google.ai import generativelanguage as glm
 from typing import List
 
-from agents.MOCKS import mock_search_agent, mock_browser_agent, mock_calendar_agent, mock_calling_agent
-from agents.contracts import AgentOutput
+from agents.MOCKS import mock_search_agent, mock_browser_agent, mock_calendar_agent, mock_calling_agent, AgentOutput
 from database.models import ProcessStep
-from .planner import Planner # Import Planner to call it for re-planning
+from .planner import Planner
 
 AVAILABLE_TOOLS = {
     "mock_search_agent": mock_search_agent,
@@ -20,22 +19,19 @@ AVAILABLE_TOOLS = {
 }
 
 class Executor:
-    """
-    Manages the step-by-step execution of a plan, with the ability
-    to trigger a re-plan upon failure.
-    """
     def __init__(self, process_id: str, original_prompt: str, run_history: List[str]):
         self.process_id = process_id
-        self.original_prompt = original_prompt # Store original goal for context
-        self.run_history = run_history # A log of actions for re-planning context
+        self.original_prompt = original_prompt
+        self.run_history = run_history
         self.model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash", # Using your specified model
+            model_name="gemini-2.5-flash",
             tools=list(AVAILABLE_TOOLS.values())
         )
 
-    async def _execute_step(self, step: ProcessStep):
-        """Executes a single step using the tool-calling ('thinking') model."""
-        prompt = step.prompt_message
+    async def _execute_step(self, step: ProcessStep, context: str) -> AgentOutput:
+        # Step now receives context from previous steps
+        prompt = f"Context from previous steps:\n{context}\n\nYour task now:\n{step.prompt_message}"
+        
         print(f"\n[{self.process_id}] --- Executing Step: '{step.step_name}' ---")
         print(f"[{self.process_id}] Prompt for model: '{prompt}'")
 
@@ -46,62 +42,77 @@ class Executor:
             function_call = response.candidates[0].content.parts[0].function_call
         except (IndexError, AttributeError):
             print(f"[{self.process_id}] Model provided a direct answer.")
-            # Even if the model answers directly, we wrap it in our standard AgentOutput
-            return {"status": "completed", "result": response.text, "error": None}
+            return AgentOutput(status="completed", result=response.text)
 
         tool_name = function_call.name
-        tool_args = dict(function_call.args) if function_call.args is not None else {}
-
-        # --- NEW, MORE EXPLICIT CHECK ---
+        
+        # --- THIS IS THE FIX ---
+        # If the model hallucinates an empty function name, we fail the step immediately
+        # and do NOT proceed to the next API call, which prevents the crash.
         if not tool_name:
             print(f"[{self.process_id}] Error: Model returned a function call with an empty name.")
-            tool_result = AgentOutput(status="failed", error="Model failed to select a valid tool.")
-        # --- END NEW CHECK ---
-        elif tool_name in AVAILABLE_TOOLS:
+            return AgentOutput(status="failed", error="Model failed to select a valid tool.")
+        # --- END FIX ---
+        
+        tool_args = dict(function_call.args) if function_call.args is not None else {}
+
+        print(f"[{self.process_id}] 🤔 Model chose to call function: '{tool_name}'")
+        print(f"[{self.process_id}]   Arguments: {tool_args}")
+
+        if tool_name in AVAILABLE_TOOLS:
+            # We now pass the structured arguments to the tool for better performance
+            # For mocks, we'll just use the prompt, but a real agent would use tool_args
             tool_function = AVAILABLE_TOOLS[tool_name]
-            tool_result = await tool_function(prompt)
+            tool_result = await tool_function(step.prompt_message)
         else:
             print(f"[{self.process_id}] Error: Model tried to call unknown tool '{tool_name}'")
-            # Note: We create an AgentOutput object here for consistency
             tool_result = AgentOutput(status="failed", error=f"Unknown tool: {tool_name}")
 
         print(f"[{self.process_id}] Tool Result: {tool_result}")
         
-        # Send the result back to the model for a final summary
         response = await chat.send_message_async(
             content=glm.Part(function_response=glm.FunctionResponse(
                 name=tool_name,
                 response={"result": json.dumps(tool_result.model_dump())}
             ))
         )
+        
         final_answer = response.candidates[0].content.parts[0].text
         print(f"[{self.process_id}] Final Answer from model: '{final_answer}'")
         
+        # The final result of the step is the result from the tool itself.
+        # The model's final_answer is just a human-friendly summary.
         return tool_result
 
     async def run(self, plan: list[ProcessStep]):
-        """Runs the plan, handling failures by triggering re-planning."""
         print(f"\n[{self.process_id}] ======= STARTING DYNAMIC EXECUTION =======")
-        completed_steps = {}
+        completed_steps = {} # Stores step_id -> result
 
-        # Use a while loop on the index, as the plan list can grow dynamically
         i = 0
         while i < len(plan):
             step = plan[i]
-            i += 1 # Increment index before potential list modifications
+            i += 1
 
-            if step.status != "pending":
-                continue
+            if step.status != "pending": continue
 
             if not all(dep_id in completed_steps for dep_id in step.dependencies):
-                plan.append(step) # Re-queue step if dependencies not met
+                plan.append(step)
                 continue
 
+            # --- CONTEXT PASSING ---
+            # Create context from the results of dependency steps
+            context = ""
+            for dep_id in step.dependencies:
+                prev_result = completed_steps.get(dep_id)
+                if prev_result:
+                    context += f"The result of a previous step was: {prev_result.result}\n"
+            if not context:
+                context = "This is the first step."
+            
             step.status = "running"
-            result = await self._execute_step(step)
+            result = await self._execute_step(step, context)
             step.output_result = result.model_dump()
             
-            # --- DYNAMIC RE-PLANNING LOGIC ---
             if result.status == "failed":
                 step.status = "failed"
                 self.run_history.append(f"ATTEMPTED: '{step.step_name}' but it FAILED with error: {result.error}")
@@ -113,12 +124,13 @@ class Executor:
                 )
                 if recovery_steps:
                     print(f"[{self.process_id}] Received {len(recovery_steps)} recovery steps. Splicing into plan.")
-                    # Insert the new steps right after the current one, in reverse order
-                    for recovery_step in reversed(recovery_steps):
-                        plan.insert(i, recovery_step)
+                    for r_step in reversed(recovery_steps):
+                        # Make new steps depend on the last successful step before the failure
+                        if step.dependencies: r_step.dependencies = [step.dependencies[-1]]
+                        plan.insert(i, r_step)
                 else:
                     print(f"[{self.process_id}] Planner did not return a recovery plan. Ending execution.")
-                    break # Stop if no recovery is possible
+                    break
             else:
                 step.status = "completed"
                 self.run_history.append(f"SUCCESS: '{step.step_name}'. Result: {result.result}")
