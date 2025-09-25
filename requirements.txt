@@ -5,4 +5,8 @@ uvicorn[standard]
 pydantic
 google-generativeai
 python-dotenv
+requests
+smolagents
+beautifulsoup4
+lxml
 # or openai, if you prefer
