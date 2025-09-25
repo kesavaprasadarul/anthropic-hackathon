@@ -91,12 +91,18 @@ class CallingModuleRouter:
         
         # Initiate outbound call
         try:
+            # Combine metadata and prompt variables for the agent
+            agent_context = {
+                "metadata": payload["metadata"],
+                "prompt_variables": payload["prompt_variables"]
+            }
+            
             call_id = self.outbound_caller.start_call(
                 agent_id=payload["agent_id"],
                 agent_phone_number_id=payload["agent_phone_number_id"],
                 to_number=normalized_task.business.phone,
                 from_number=payload.get("from_number"),
-                metadata=payload["metadata"]
+                metadata=agent_context
             )
             
             # Store call tracking info

@@ -13,6 +13,21 @@ A channel-scoped capability for the Jarvis multi-agent system that enables outbo
 - **Input Validation**: Comprehensive task validation and normalization
 - **Error Handling**: Proper handling of ElevenLabs API errors (authentication, rate limits, etc.)
 
+## Project Structure
+
+```
+📁 calling_module/           # Core calling module package
+📁 tests/                    # All test files (unit + real phone tests)
+📁 docs/                     # Documentation and guides
+📄 main.py                   # FastAPI application entry point
+📄 requirements.txt          # Python dependencies
+📄 env.example               # Environment variables template
+📄 README.md                 # This file
+📄 PHONE_NUMBERS.md          # Phone number configuration
+```
+
+See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for detailed organization.
+
 ## Quick Start
 
 ### 1. Install Dependencies
@@ -141,17 +156,46 @@ Based on the call outcome, the module suggests next actions:
 
 ## Testing
 
-Run the test suite:
+### Unit Tests
+Run the unit test suite with mocks:
 
 ```bash
-pytest tests/
+pytest tests/test_calling_module.py
 ```
 
-The tests include:
-- Input validation scenarios
-- Call outcome processing
-- Error handling
-- Integration tests
+### Real Phone Tests
+Test with actual phone calls using different agents:
+
+```bash
+# Reservation agent tests
+python tests/test_with_real_phone.py restaurant
+python tests/test_with_real_phone.py hotel
+python tests/test_with_real_phone.py hairdresser
+
+# Reschedule agent tests  
+python tests/test_with_real_phone_reschedule.py restaurant
+python tests/test_with_real_phone_reschedule.py hotel
+python tests/test_with_real_phone_reschedule.py hairdresser
+
+# Cancel agent tests
+python tests/test_with_real_phone_cancel.py restaurant
+python tests/test_with_real_phone_cancel.py hotel
+python tests/test_with_real_phone_cancel.py hairdresser
+
+# Info agent tests
+python tests/test_with_real_phone_info.py restaurant
+python tests/test_with_real_phone_info.py hotel
+python tests/test_with_real_phone_info.py hairdresser
+```
+
+### Postcall Handler Tests
+Simulate webhook scenarios:
+
+```bash
+python tests/test_postcall_handler.py
+```
+
+See [`docs/`](docs/) for detailed testing guides for each agent type.
 
 ## Architecture
 

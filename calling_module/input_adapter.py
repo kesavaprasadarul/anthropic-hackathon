@@ -189,6 +189,14 @@ class InputAdapter:
                 required_for_intent=TaskIntent.RESCHEDULE
             ))
         
+        # Validate current date (required for new prompt structure)
+        if not reschedule.get("current_date"):
+            errors.append(ValidationError(
+                field="reschedule.current_date",
+                message="Current date is required for reschedule",
+                required_for_intent=TaskIntent.RESCHEDULE
+            ))
+        
         # Validate new date/time
         if not reschedule.get("new_date"):
             errors.append(ValidationError(
@@ -343,6 +351,7 @@ class InputAdapter:
     def _build_reschedule_task(self, reschedule_data: dict) -> RescheduleTask:
         """Build RescheduleTask from data."""
         new_date = self._parse_datetime(reschedule_data["new_date"])
+        current_date = self._parse_datetime(reschedule_data["current_date"])
         
         time_window_data = reschedule_data["new_time_window"]
         new_time_window = TimeWindow(
@@ -351,20 +360,53 @@ class InputAdapter:
             date=new_date
         )
         
+        # Build current time window if provided
+        current_time_window = None
+        if "current_time_window" in reschedule_data and reschedule_data["current_time_window"]:
+            current_time_data = reschedule_data["current_time_window"]
+            current_time_window = TimeWindow(
+                start_time=self._parse_time(current_time_data["start_time"]),
+                end_time=self._parse_time(current_time_data["end_time"]),
+                date=current_date
+            )
+        
         return RescheduleTask(
-            booking_reference=reschedule_data.get("booking_reference"),
-            disambiguation_bundle=reschedule_data.get("disambiguation_bundle"),
+            current_date=current_date,
+            current_time_window=current_time_window,
             new_date=new_date,
-            new_time_window=new_time_window
+            new_time_window=new_time_window,
+            booking_reference=reschedule_data.get("booking_reference"),
+            notes=reschedule_data.get("notes"),
+            budget_range=reschedule_data.get("budget_range"),
+            party_size=reschedule_data.get("party_size"),
+            disambiguation_bundle=reschedule_data.get("disambiguation_bundle")
         )
     
     def _build_cancel_task(self, cancel_data: dict) -> CancelTask:
         """Build CancelTask from data."""
+        # Parse current date if provided
+        current_date = None
+        if cancel_data.get("current_date"):
+            current_date = self._parse_datetime(cancel_data["current_date"])
+        
+        # Build current time window if provided
+        current_time_window = None
+        if "current_time_window" in cancel_data and cancel_data["current_time_window"] and current_date:
+            current_time_data = cancel_data["current_time_window"]
+            current_time_window = TimeWindow(
+                start_time=self._parse_time(current_time_data["start_time"]),
+                end_time=self._parse_time(current_time_data["end_time"]),
+                date=current_date
+            )
+        
         return CancelTask(
             booking_reference=cancel_data.get("booking_reference"),
-            disambiguation_bundle=cancel_data.get("disambiguation_bundle"),
             name_on_reservation=cancel_data.get("name_on_reservation"),
-            cancellation_reason=cancel_data.get("cancellation_reason")
+            current_date=current_date,
+            current_time_window=current_time_window,
+            notes=cancel_data.get("notes"),
+            cancellation_reason=cancel_data.get("cancellation_reason"),
+            disambiguation_bundle=cancel_data.get("disambiguation_bundle")
         )
     
     def _build_info_task(self, info_data: dict) -> InfoTask:
@@ -372,6 +414,7 @@ class InputAdapter:
         return InfoTask(
             question_type=info_data["question_type"],
             context=info_data.get("context"),
+            notes=info_data.get("notes"),
             specific_date=self._parse_datetime(info_data.get("specific_date")) if info_data.get("specific_date") else None,
             party_size=info_data.get("party_size")
         )

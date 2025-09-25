@@ -8,11 +8,59 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any
 import uvicorn
+import hmac
+import hashlib
+import base64
 
 from calling_module import start_call, on_postcall
 from calling_module.tool_webhook import tool_handler
 from calling_module.observability import ObservabilityLogger
 from calling_module.config import get_config
+
+
+def verify_webhook_signature(payload: str, signature: str, secret: str) -> bool:
+    """
+    Verify ElevenLabs webhook signature using HMAC-SHA256.
+    
+    Args:
+        payload: Raw request body as string
+        signature: ElevenLabs-Signature header value (format: "t=timestamp,v0=hash")
+        secret: Webhook secret from ElevenLabs
+        
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    if not signature or not secret:
+        return False
+    
+    try:
+        # Parse signature format: "t=timestamp,v0=hash"
+        if ',v0=' not in signature:
+            return False
+        
+        timestamp = signature.split(',v0=')[0][2:]  # Remove 't=' prefix
+        received_hash = signature.split(',v0=')[1]
+        
+        # Validate timestamp (within 30 minutes)
+        import time
+        current_time = int(time.time())
+        tolerance = 30 * 60  # 30 minutes
+        if int(timestamp) < (current_time - tolerance):
+            return False
+        
+        # Create expected signature: HMAC of "timestamp.payload"
+        payload_to_sign = f"{timestamp}.{payload}"
+        expected_hash = hmac.new(
+            secret.encode('utf-8'),
+            payload_to_sign.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        # Use constant-time comparison to prevent timing attacks
+        return hmac.compare_digest(received_hash, expected_hash)
+        
+    except (ValueError, IndexError):
+        return False
 
 
 # Initialize FastAPI app
@@ -45,6 +93,17 @@ async def health_check():
     }
 
 
+@app.get("/debug/config")
+async def debug_config():
+    """Debug endpoint to check configuration (remove in production)."""
+    config = get_config()
+    return {
+        "webhook_secret_configured": bool(getattr(config.elevenlabs, 'webhook_secret', None)),
+        "webhook_secret_length": len(getattr(config.elevenlabs, 'webhook_secret', '') or ''),
+        "environment": config.service.environment
+    }
+
+
 @app.get("/metrics")
 async def get_metrics():
     """Get service metrics."""
@@ -72,19 +131,95 @@ async def start_call_endpoint(request_data: Dict[str, Any]):
 
 
 @app.post("/postcall")
-async def postcall_webhook(request_data: Dict[str, Any], request: Request):
+async def postcall_webhook(request: Request):
     """
     Post-call webhook from ElevenLabs.
     
     Processes the call outcome and returns normalized results.
     """
     try:
-        # Verify webhook signature in production
-        if get_config().service.environment != "development":
-            # Add signature verification here
-            pass
+        # Get raw request body for signature verification
+        raw_body = await request.body()
+        request_data = await request.json()
         
-        result = on_postcall(request_data)
+        # Verify webhook signature if secret is configured
+        config = get_config()
+        webhook_secret = getattr(config.elevenlabs, 'webhook_secret', None)
+        
+        # Debug logging
+        logger._log_event(
+            level="DEBUG",
+            event_type="webhook_debug",
+            message="Webhook received",
+            metadata={
+                "webhook_secret_configured": bool(webhook_secret),
+                "webhook_secret_length": len(webhook_secret or ''),
+                "elevenlabs_signature_header": request.headers.get('ElevenLabs-Signature', 'missing'),
+                "body_length": len(raw_body)
+            },
+            correlation_id=request_data.get("call_id", "unknown")
+        )
+        
+        if webhook_secret:
+            # ElevenLabs uses 'ElevenLabs-Signature' header (with capital letters)
+            signature = request.headers.get('ElevenLabs-Signature', '')
+            
+            if signature:
+                if not verify_webhook_signature(raw_body.decode('utf-8'), signature, webhook_secret):
+                    logger._log_event(
+                        level="WARNING",
+                        event_type="webhook_signature_verification_failed",
+                        message="Invalid webhook signature received",
+                        metadata={
+                            "signature": signature[:10] + "..." if signature else "missing",
+                            "webhook_secret_length": len(webhook_secret),
+                            "body_length": len(raw_body)
+                        },
+                        correlation_id=request_data.get("call_id", "unknown")
+                    )
+                    raise HTTPException(status_code=401, detail="Invalid webhook signature")
+            else:
+                # Temporary bypass for development - remove in production!
+                if config.service.environment == "development":
+                    logger._log_event(
+                        level="WARNING",
+                        event_type="webhook_signature_bypass",
+                        message="Bypassing signature verification in development mode",
+                        metadata={"reason": "No signature header found"},
+                        correlation_id=request_data.get("call_id", "unknown")
+                    )
+                logger._log_event(
+                    level="WARNING",
+                    event_type="webhook_signature_verification_failed",
+                    message="Invalid webhook signature received",
+                    metadata={
+                        "signature": signature[:10] + "..." if signature else "missing",
+                        "webhook_secret_length": len(webhook_secret),
+                        "body_length": len(raw_body)
+                    },
+                    correlation_id=request_data.get("call_id", "unknown")
+                )
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        
+        # Handle ElevenLabs webhook payload structure
+        # ElevenLabs sends: {"type": "...", "event_timestamp": "...", "data": {...}}
+        # We need to extract the actual call data from the "data" field
+        actual_payload = request_data.get("data", request_data)
+        
+        # Debug logging for payload structure
+        logger._log_event(
+            level="DEBUG",
+            event_type="webhook_payload_debug",
+            message="Processing webhook payload",
+            metadata={
+                "has_data_field": "data" in request_data,
+                "actual_payload_keys": list(actual_payload.keys()) if isinstance(actual_payload, dict) else "not_dict",
+                "call_id_in_actual": actual_payload.get("call_id") if isinstance(actual_payload, dict) else None
+            },
+            correlation_id=actual_payload.get("call_id", "unknown")
+        )
+        
+        result = on_postcall(actual_payload)
         
         # Convert result to dict for JSON response
         result_dict = {

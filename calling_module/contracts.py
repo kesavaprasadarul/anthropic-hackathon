@@ -92,7 +92,12 @@ class RescheduleTask:
     """Reschedule task details."""
     new_date: datetime
     new_time_window: TimeWindow
+    current_date: datetime
+    current_time_window: Optional[TimeWindow] = None
     booking_reference: Optional[str] = None
+    notes: Optional[str] = None
+    budget_range: Optional[str] = None
+    party_size: Optional[int] = None
     disambiguation_bundle: Optional[Dict[str, Any]] = None  # Name, date, time, etc.
 
 
@@ -100,9 +105,12 @@ class RescheduleTask:
 class CancelTask:
     """Cancellation task details."""
     booking_reference: Optional[str] = None
-    disambiguation_bundle: Optional[Dict[str, Any]] = None
     name_on_reservation: Optional[str] = None
+    current_date: Optional[datetime] = None
+    current_time_window: Optional[TimeWindow] = None
+    notes: Optional[str] = None
     cancellation_reason: Optional[str] = None
+    disambiguation_bundle: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -110,6 +118,7 @@ class InfoTask:
     """Information request task details."""
     question_type: Literal["availability", "status", "hours", "price", "policies"]
     context: Optional[str] = None
+    notes: Optional[str] = None
     specific_date: Optional[datetime] = None
     party_size: Optional[int] = None
 

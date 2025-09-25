@@ -10,39 +10,65 @@ This guide explains how to run the calling module tests with your phone number.
 - **Special Notes**: "Birthday dinner - testing the calling module"
 - **Duration**: Max 4 minutes
 
-### **Test 2: Info Request**
-- **Your Role**: Restaurant owner/staff at "Jonas's Test Restaurant"
-- **AI's Request**: Check availability for 2 people next weekend
-- **Purpose**: Information gathering
-- **Duration**: Shorter call
+### **Available Test Types:**
+- **Reservation Agent**: Restaurant, hotel, and hairdresser booking scenarios
+- **Reschedule Agent**: Restaurant, hotel, and hairdresser reschedule scenarios  
+- **Cancel Agent**: Restaurant, hotel, and hairdresser cancellation scenarios
+- **Info Agent**: Restaurant, hotel, and hairdresser information request scenarios
 
 ## 🚀 How to Run Tests
 
-### **Option 1: Run Both Tests Sequentially (Recommended)**
+### **Reservation Agent Tests**
 ```bash
-python3 test_with_real_phone.py
+# Run specific reservation scenario
+python tests/test_with_real_phone.py restaurant
+python tests/test_with_real_phone.py hotel
+python tests/test_with_real_phone.py hairdresser
+
+# Run all reservation scenarios sequentially
+python tests/test_with_real_phone.py
 ```
-**What happens**:
-1. First call (Reservation) starts immediately
-2. 30-second delay after first call
-3. Second call (Info) starts automatically
-4. You can take one call at a time
 
-### **Option 2: Run Single Test**
+### **Reschedule Agent Tests**
 ```bash
-# Run only the reservation test
-python3 test_with_real_phone.py reservation
+# Run specific reschedule scenario
+python tests/test_with_real_phone_reschedule.py restaurant
+python tests/test_with_real_phone_reschedule.py hotel
+python tests/test_with_real_phone_reschedule.py hairdresser
 
-# Run only the info test
-python3 test_with_real_phone.py info
+# Run all reschedule scenarios sequentially
+python tests/test_with_real_phone_reschedule.py
+```
+
+### **Cancel Agent Tests**
+```bash
+# Run specific cancel scenario
+python tests/test_with_real_phone_cancel.py restaurant
+python tests/test_with_real_phone_cancel.py hotel
+python tests/test_with_real_phone_cancel.py hairdresser
+
+# Run all cancel scenarios sequentially
+python tests/test_with_real_phone_cancel.py
+```
+
+### **Info Agent Tests**
+```bash
+# Run specific info scenario
+python tests/test_with_real_phone_info.py restaurant
+python tests/test_with_real_phone_info.py hotel
+python tests/test_with_real_phone_info.py hairdresser
+
+# Run all info scenarios sequentially
+python tests/test_with_real_phone_info.py
 ```
 
 ## ⏰ Call Timing
 
-| Test | Start Time | Duration | Gap |
-|------|------------|----------|-----|
-| **Reservation** | Immediate | ~4 minutes | 30 seconds |
-| **Info** | After gap | ~2 minutes | - |
+Each test scenario runs with:
+- **Individual Test**: Starts immediately when run
+- **Sequential Tests**: 30-second delay between each scenario
+- **Typical Duration**: 2-4 minutes per call depending on complexity
+- **Gap Between Calls**: 30 seconds when running multiple scenarios
 
 ## 📱 What to Expect
 
@@ -65,11 +91,11 @@ python3 test_with_real_phone.py info
 - 🔄 **Negotiate**: "We don't have 7 PM, but we have 8 PM available"
 - 📝 **Ask questions**: "Do you have any dietary restrictions?"
 
-### **For Info Test**
-- ✅ **Provide info**: "We have availability Saturday at 7 PM and Sunday at 6 PM"
-- ❌ **Say busy**: "We're fully booked next weekend"
-- 🔄 **Ask for details**: "What time are you looking for?"
-- 📝 **Give general info**: "We typically book 2-3 weeks in advance"
+### **For Different Agent Types**
+- ✅ **Reservation**: Accept bookings, suggest alternatives, confirm details
+- ✅ **Reschedule**: Help move existing bookings, check availability
+- ✅ **Cancel**: Process cancellations, explain policies, provide confirmations
+- ✅ **Info**: Provide requested information, answer questions clearly
 
 ## 🔧 Troubleshooting
 

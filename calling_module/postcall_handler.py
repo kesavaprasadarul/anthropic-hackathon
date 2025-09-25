@@ -64,24 +64,135 @@ class PostCallHandler:
         self.logger.log_webhook_processing_started(webhook_payload)
         
         try:
-            # Extract basic information
-            call_id = webhook_payload.get("call_id")
-            status_text = webhook_payload.get("status", "").lower()
-            summary = webhook_payload.get("summary", "")
-            transcript = webhook_payload.get("transcript", "")
+            # Handle ElevenLabs webhook format
+            if "type" in webhook_payload and webhook_payload["type"] == "post_call_transcription":
+                # ElevenLabs format: extract data from nested structure
+                data = webhook_payload.get("data", {})
+                call_id = data.get("conversation_id")
+                status_text = data.get("status", "").lower()
+                
+                # Extract transcript summary from analysis
+                analysis = data.get("analysis", {})
+                summary = analysis.get("transcript_summary", "")
+                
+                # Debug logging for analysis and summary
+                self.logger._log_event(
+                    level="DEBUG",
+                    event_type="analysis_debug",
+                    message="Processing analysis data",
+                    metadata={
+                        "analysis_type": type(analysis).__name__,
+                        "analysis_keys": list(analysis.keys()) if isinstance(analysis, dict) else "not_dict",
+                        "summary_type": type(summary).__name__,
+                        "summary_value": str(summary)[:100] if summary else "empty"
+                    },
+                    correlation_id=call_id
+                )
+                
+                # Extract full transcript text
+                transcript_turns = data.get("transcript", [])
+                
+                # Debug logging for transcript structure
+                self.logger._log_event(
+                    level="DEBUG",
+                    event_type="transcript_debug",
+                    message="Processing transcript",
+                    metadata={
+                        "transcript_type": type(transcript_turns).__name__,
+                        "transcript_length": len(transcript_turns) if isinstance(transcript_turns, list) else "not_list",
+                        "first_item_type": type(transcript_turns[0]).__name__ if transcript_turns and isinstance(transcript_turns, list) else "none",
+                        "first_item_sample": str(transcript_turns[0])[:100] if transcript_turns and isinstance(transcript_turns, list) else "none"
+                    },
+                    correlation_id=call_id
+                )
+                
+                transcript = self._extract_transcript_text(transcript_turns)
+                
+                # Debug logging for transcript result
+                self.logger._log_event(
+                    level="DEBUG",
+                    event_type="transcript_extraction_debug",
+                    message="Transcript extraction completed",
+                    metadata={
+                        "transcript_type": type(transcript).__name__,
+                        "transcript_length": len(transcript) if isinstance(transcript, str) else "not_string",
+                        "transcript_preview": transcript[:200] if isinstance(transcript, str) else str(transcript)[:200]
+                    },
+                    correlation_id=call_id
+                )
+                
+                # Log the actual conversation turns for debugging
+                self.logger._log_event(
+                    level="INFO",
+                    event_type="transcript_structure_debug",
+                    message="Transcript structure analysis",
+                    metadata={
+                        "conversation_id": call_id,
+                        "transcript_turns_type": type(transcript_turns).__name__,
+                        "transcript_turns_length": len(transcript_turns) if isinstance(transcript_turns, list) else "not_list",
+                        "first_turn_sample": str(transcript_turns[0]) if transcript_turns and isinstance(transcript_turns, list) else "none",
+                        "first_turn_keys": list(transcript_turns[0].keys()) if transcript_turns and isinstance(transcript_turns, list) and isinstance(transcript_turns[0], dict) else "not_dict"
+                    },
+                    correlation_id=call_id
+                )
+                
+                if isinstance(transcript_turns, list) and transcript_turns:
+                    self.logger._log_event(
+                        level="INFO",
+                        event_type="conversation_transcript",
+                        message="Full conversation transcript",
+                        metadata={
+                            "conversation_id": call_id,
+                            "total_turns": len(transcript_turns),
+                            "transcript_turns": [
+                                {
+                                    "role": turn.get("role", "unknown") if isinstance(turn, dict) else "not_dict",
+                                    "text": turn.get("text", "") if isinstance(turn, dict) else str(turn),
+                                    "timestamp": turn.get("timestamp", "") if isinstance(turn, dict) else ""
+                                } for turn in transcript_turns[:10]  # Limit to first 10 turns for logging
+                            ]
+                        },
+                        correlation_id=call_id
+                    )
+                
+                # Store the full data for artifact extraction
+                full_data = data
+            else:
+                # Legacy format or direct data
+                call_id = webhook_payload.get("call_id")
+                status_text = webhook_payload.get("status", "").lower()
+                summary = webhook_payload.get("summary", "")
+                transcript = webhook_payload.get("transcript", "")
+                full_data = webhook_payload
+            
+            # Debug logging before status determination
+            self.logger._log_event(
+                level="DEBUG",
+                event_type="status_determination_debug",
+                message="About to determine status",
+                metadata={
+                    "status_text_type": type(status_text).__name__,
+                    "status_text_value": str(status_text),
+                    "summary_type": type(summary).__name__,
+                    "summary_value": str(summary)[:100],
+                    "transcript_type": type(transcript).__name__,
+                    "transcript_value": str(transcript)[:100]
+                },
+                correlation_id=call_id
+            )
             
             # Determine normalized status
             status = self._determine_status(status_text, summary, transcript)
             
             # Extract artifacts and observations
-            artifact = self._extract_artifact(webhook_payload, status)
-            observations = self._extract_observations(webhook_payload, status)
+            artifact = self._extract_artifact(full_data, status)
+            observations = self._extract_observations(full_data, status)
             
             # Determine next action
             next_action = self._determine_next_action(status, artifact, observations)
             
             # Build evidence
-            evidence = self._build_evidence(webhook_payload)
+            evidence = self._build_evidence(full_data)
             
             # Generate human-readable message
             message = self._generate_message(status, artifact, observations)
@@ -124,6 +235,11 @@ class PostCallHandler:
     
     def _determine_status(self, status_text: str, summary: str, transcript: str) -> CallStatus:
         """Determine normalized status from webhook data."""
+        # Ensure all inputs are strings
+        status_text = str(status_text) if status_text else ""
+        summary = str(summary) if summary else ""
+        transcript = str(transcript) if transcript else ""
+        
         combined_text = f"{status_text} {summary} {transcript}".lower()
         
         # Check for each status pattern
@@ -146,6 +262,10 @@ class PostCallHandler:
         
         summary = webhook_payload.get("summary", "")
         transcript = webhook_payload.get("transcript", "")
+        
+        # Ensure summary and transcript are strings
+        summary = str(summary) if summary else ""
+        transcript = str(transcript) if transcript else ""
         
         artifact = CallArtifact()
         
@@ -200,6 +320,11 @@ class PostCallHandler:
         """Extract observations and additional information."""
         summary = webhook_payload.get("summary", "")
         transcript = webhook_payload.get("transcript", "")
+        
+        # Ensure summary and transcript are strings
+        summary = str(summary) if summary else ""
+        transcript = str(transcript) if transcript else ""
+        
         combined_text = f"{summary} {transcript}".lower()
         
         observations = CallObservations()
@@ -276,7 +401,7 @@ class PostCallHandler:
     def _build_evidence(self, webhook_payload: Dict[str, Any]) -> CallEvidence:
         """Build evidence object from webhook data."""
         return CallEvidence(
-            provider_call_id=webhook_payload.get("call_id"),
+            provider_call_id=webhook_payload.get("conversation_id") or webhook_payload.get("call_id"),
             transcript_url=webhook_payload.get("transcript_url"),
             recording_url=webhook_payload.get("recording_url"),
             call_duration_seconds=webhook_payload.get("duration_seconds"),
@@ -315,3 +440,21 @@ class PostCallHandler:
             return "An error occurred during the call"
         
         return "Call completed with unknown status"
+    
+    def _extract_transcript_text(self, transcript_turns: List[Dict[str, Any]]) -> str:
+        """Extract full transcript text from ElevenLabs transcript turns."""
+        if not transcript_turns:
+            return ""
+        
+        transcript_parts = []
+        for turn in transcript_turns:
+            if isinstance(turn, dict):
+                speaker = turn.get("speaker", "")
+                text = turn.get("text", "")
+                if text:
+                    transcript_parts.append(f"{speaker}: {text}")
+            elif isinstance(turn, str):
+                # Handle case where transcript might be a list of strings
+                transcript_parts.append(turn)
+        
+        return " ".join(transcript_parts)

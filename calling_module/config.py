@@ -20,10 +20,15 @@ except ImportError:
 class ElevenLabsConfig:
     """ElevenLabs API configuration."""
     api_key: str
-    agent_id: str
+    agent_id: str  # Default/reservation agent
     agent_phone_number_id: str
+    # Specialized agents for different task types
+    reschedule_agent_id: Optional[str] = None
+    cancel_agent_id: Optional[str] = None
+    info_agent_id: Optional[str] = None
     voice_id: Optional[str] = None
     language: str = "en-US"
+    webhook_secret: Optional[str] = None
 
 
 @dataclass
@@ -72,8 +77,12 @@ def load_config() -> CallingModuleConfig:
         api_key=elevenlabs_api_key,
         agent_id=elevenlabs_agent_id,
         agent_phone_number_id=elevenlabs_agent_phone_number_id,
+        reschedule_agent_id=os.getenv("ELEVENLABS_RESCHEDULE_AGENT_ID"),
+        cancel_agent_id=os.getenv("ELEVENLABS_CANCEL_AGENT_ID"),
+        info_agent_id=os.getenv("ELEVENLABS_INFO_AGENT_ID"),
         voice_id=os.getenv("ELEVENLABS_VOICE_ID"),
-        language=os.getenv("ELEVENLABS_LANGUAGE", "en-US")
+        language=os.getenv("ELEVENLABS_LANGUAGE", "en-US"),
+        webhook_secret=os.getenv("ELEVENLABS_WEBHOOK_SECRET")
     )
     
     # Twilio configuration (optional for managed ElevenLabs)

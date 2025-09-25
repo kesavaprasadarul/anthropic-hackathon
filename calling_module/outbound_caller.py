@@ -48,12 +48,87 @@ class OutboundCaller:
             # Initialize client with API key
             client = ElevenLabs(api_key=get_config().elevenlabs.api_key)
             
-            # Make the actual outbound call using ElevenLabs SDK
+            # Step 1: Verify agent exists and list available agents
+            self.logger._log_event(
+                level="DEBUG",
+                event_type="agent_verification",
+                message="Verifying agent exists before call",
+                metadata={"agent_id": agent_id},
+                correlation_id=call_id
+            )
+            
+            try:
+                agents_response = client.conversational_ai.agents.list()
+                available_agents = {agent.agent_id: agent.name for agent in agents_response.agents}
+                
+                if agent_id not in available_agents:
+                    error_msg = f"Agent {agent_id} not found in available agents: {list(available_agents.keys())}"
+                    self.logger.log_call_initiation_failed(call_id, error_msg)
+                    raise RuntimeError(error_msg)
+                
+                self.logger._log_event(
+                    level="DEBUG",
+                    event_type="agent_verified",
+                    message="Agent verified successfully",
+                    metadata={"agent_id": agent_id, "agent_name": available_agents[agent_id]},
+                    correlation_id=call_id
+                )
+                
+            except Exception as e:
+                error_msg = f"Failed to verify agent: {str(e)}"
+                self.logger.log_call_initiation_failed(call_id, error_msg)
+                raise RuntimeError(error_msg)
+            
+            # Step 2: Assign the phone number to the specific agent
+            self.logger._log_event(
+                level="DEBUG",
+                event_type="phone_number_assignment",
+                message="Assigning phone number to agent",
+                metadata={"agent_id": agent_id, "phone_number_id": agent_phone_number_id},
+                correlation_id=call_id
+            )
+            
+            try:
+                phone_update_response = client.conversational_ai.phone_numbers.update(
+                    phone_number_id=agent_phone_number_id,
+                    agent_id=agent_id
+                )
+                
+                self.logger._log_event(
+                    level="DEBUG",
+                    event_type="phone_number_assigned",
+                    message="Phone number successfully assigned to agent",
+                    metadata={
+                        "agent_id": agent_id,
+                        "phone_number_id": agent_phone_number_id,
+                        "assigned_agent": phone_update_response.assigned_agent.agent_id if phone_update_response.assigned_agent else None
+                    },
+                    correlation_id=call_id
+                )
+                
+            except Exception as e:
+                error_msg = f"Failed to assign phone number to agent: {str(e)}"
+                self.logger.log_call_initiation_failed(call_id, error_msg)
+                raise RuntimeError(error_msg)
+            
+            # Extract dynamic variables and metadata
+            dynamic_variables = metadata.get("prompt_variables", {})
+            conversation_data = metadata.get("metadata", {})
+            
+            # Step 3: Combine conversation data with dynamic variables
+            # According to ElevenLabs docs, dynamic variables should be passed in conversation_initiation_client_data
+            full_conversation_data = {
+                **conversation_data,
+                "dynamic_variables": dynamic_variables
+            }
+            
+            # Step 4: Make the actual outbound call using ElevenLabs SDK
+            # Phone number is now assigned to the correct agent
             call_response = client.conversational_ai.twilio.outbound_call(
                 agent_id=agent_id,
                 agent_phone_number_id=agent_phone_number_id,
                 to_number=to_number,
-                conversation_initiation_client_data=metadata
+                conversation_initiation_client_data=full_conversation_data
             )
             
             # Extract the actual call ID from the response
@@ -83,6 +158,19 @@ class OutboundCaller:
             )
             
             self.logger.log_call_initiated(actual_call_id, to_number)
+            
+            self.logger._log_event(
+                level="INFO",
+                event_type="call_flow_completed",
+                message="Call flow completed successfully: agent verified, phone assigned, call initiated",
+                metadata={
+                    "call_id": actual_call_id,
+                    "agent_id": agent_id,
+                    "phone_number_id": agent_phone_number_id,
+                    "to_number": "REDACTED"
+                },
+                correlation_id=actual_call_id
+            )
             
             return actual_call_id
             

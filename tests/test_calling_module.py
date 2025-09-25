@@ -37,7 +37,9 @@ class TestInputAdapter:
             "reservation": {
                 "date": "2024-01-15",
                 "time_window": {"start_time": "19:00", "end_time": "21:00"},
-                "party_size": 2
+                "party_size": 2,
+                "notes": "Birthday dinner celebration",
+                "budget_range": "$50–80 per person"
             }
         }, True),
         
@@ -125,7 +127,9 @@ class TestInputAdapter:
             "reservation": {
                 "date": "2024-01-15",
                 "time_window": {"start_time": "19:00", "end_time": "21:00"},
-                "party_size": 2
+                "party_size": 2,
+                "notes": "Business dinner meeting",
+                "budget_range": "$40–60 per person"
             }
         }
         
@@ -263,7 +267,9 @@ class TestRouterIntegration:
             "reservation": {
                 "date": "2024-01-15",
                 "time_window": {"start_time": "19:00", "end_time": "21:00"},
-                "party_size": 2
+                "party_size": 2,
+                "notes": "Anniversary dinner",
+                "budget_range": "$60–100 per person"
             }
         }
         
