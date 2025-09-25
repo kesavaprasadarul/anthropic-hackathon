@@ -120,6 +120,23 @@ class BrowserAutomationRouter:
         
         return await self.execute_automation(info_data)
     
+    async def execute_recommendation(self, recommendation_data: Dict[str, Any]) -> BrowserAutomationResult:
+        """
+        Execute a restaurant recommendation task.
+        
+        Convenience method for recommendation-specific requests.
+        
+        Args:
+            recommendation_data: Recommendation task data
+            
+        Returns:
+            BrowserAutomationResult: Recommendation result
+        """
+        # Ensure intent is set to recommend
+        recommendation_data["intent"] = "recommend"
+        
+        return await self.execute_automation(recommendation_data)
+    
     def _create_empty_evidence(self):
         """Create empty evidence for error cases."""
         from contracts import Evidence
@@ -257,6 +274,46 @@ async def get_business_info(
         "intent": "info",
         "info": {
             "info_type": info_type,
+            **kwargs
+        }
+    }
+    
+    router = get_router()
+    return await router.execute_automation(task_data)
+
+
+async def recommend_restaurants(
+    user_query: str,
+    area: str,
+    budget: int,
+    **kwargs
+) -> BrowserAutomationResult:
+    """
+    Simplified restaurant recommendation interface.
+    
+    Args:
+        user_query: User's food preferences and requirements
+        area: Geographic area to search in
+        budget: Budget per person in euros
+        **kwargs: Additional recommendation parameters
+        
+    Returns:
+        BrowserAutomationResult: Recommendation result
+    """
+    task_data = {
+        "business": {
+            "name": f"Restaurant Search in {area}",
+            "website": ""
+        },
+        "user": {
+            "name": "Restaurant Seeker",
+            "email": "recommendations@example.com"
+        },
+        "intent": "recommend",
+        "recommend": {
+            "user_query": user_query,
+            "area": area,
+            "budget": budget,
             **kwargs
         }
     }

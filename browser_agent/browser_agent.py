@@ -16,7 +16,7 @@ This module provides a clean, scalable architecture for browser-based task autom
 ## Quick Start
 
 ```python
-from browser_agent import make_reservation, get_business_info
+from browser_agent import make_reservation, get_business_info, recommend_restaurants
 
 # Make a reservation
 result = await make_reservation(
@@ -35,6 +35,13 @@ info_result = await get_business_info(
     business_name="Restaurant Name", 
     business_website="https://restaurant.com",
     info_type="opening_hours"
+)
+
+# Get restaurant recommendations
+recommendations = await recommend_restaurants(
+    user_query="Italian food, vegetarian options",
+    area="Munich",
+    budget=30
 )
 ```
 
@@ -76,6 +83,7 @@ from router import (
     execute_browser_automation,
     make_reservation, 
     get_business_info,
+    recommend_restaurants,
     get_router,
     BrowserAutomationRouter
 )

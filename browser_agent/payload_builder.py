@@ -6,10 +6,10 @@ for browser-use agent execution.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime
 
-from contracts import BrowserTask, Intent, InfoType, ReservePayload, InfoPayload
+from contracts import BrowserTask, Intent, InfoType, ReservePayload, InfoPayload, RecommendPayload
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,8 @@ class PayloadBuilder:
             return self._build_reservation_instructions(task)
         elif task.intent == Intent.INFO:
             return self._build_info_instructions(task)
+        elif task.intent == Intent.RECOMMEND:
+            return self._build_recommend_instructions(task)
         else:
             raise ValueError(f"Unsupported intent: {task.intent}")
     
@@ -88,7 +90,8 @@ class PayloadBuilder:
 Make a restaurant reservation at {business.name} ({business.website})
 
 **Critical Instructions:**
-- Navigate to {business.website} and verify it's the correct restaurant
+- Navigate to {business.website} and verify it's the correct restaurant. Ensure that {business.name} and {business.website} match.
+- Confirm that this is a restaurant and not another service
 - Check if restaurant is open on {payload.date} during {payload.time_window_start}-{payload.time_window_end}
 - Look for online reservation system (booking form, OpenTable, Resy, etc.)
 - If the website explicitly states that no reservations are possible or only via phone, abort the process and format the output
@@ -109,20 +112,33 @@ Make a restaurant reservation at {business.name} ({business.website})
 - Reservation must be confirmed with a confirmation number or reference
 - All reservation details must match. The groups size must be permmitted by the restaurant and the date and time must match
 - All provided details must be accurately entered
-- Screenshot evidence of confirmation page must be captured
-
-**Return JSON with:**
-- success: boolean
-- confirmation_details: reservation confirmation info including reference number
-- confirmed_date: actual confirmed date (YYYY-MM-DD format)
-- confirmed_time: actual confirmed time (HH:MM format)
-- party_size: confirmed party size
-- error_type: if failed (NO_WEBSITE, RESTAURANT_CLOSED, NO_AVAILABILITY, etc.)
-- screenshots_taken: list of screenshot descriptions
-- next_steps: any follow-up actions needed
 """
         
         logger.debug(f"Built reservation instructions for {business.name}")
+        return instructions.strip()
+    
+    def _build_recommend_instructions(self, task: BrowserTask) -> str:
+        """Build instructions for restaurant recommendation tasks."""
+        payload: RecommendPayload = task.payload
+        
+        instructions = f"""Find food recommendations in {payload.area} for this user query: {payload.user_query}
+
+STEPS:
+1. Search for highly rated restaurants in {payload.area}
+2. Filter results to match user preferences: {payload.user_query}
+3. Verify price range is within {payload.budget} euros per person
+4. Find the 2 best matches with current information
+5. Extract key details: name, cuisine, price range, rating, hours
+
+REQUIREMENTS:
+- Must match user preferences exactly
+- Price must be within {payload.budget}€ budget
+- Provide 2 top recommendations
+- Include specific details (hours, location, prices)
+- Response must be under 6 sentences
+- Take screenshots of restaurant pages for evidence"""
+        
+        logger.debug(f"Built recommendation instructions for area: {payload.area}, budget: {payload.budget}")
         return instructions.strip()
     
     def _build_info_instructions(self, task: BrowserTask) -> str:
@@ -157,6 +173,7 @@ Get {payload.info_type.value} information from {business.name} ({business.websit
 
 **Instructions:**
 - Navigate to {business.website}
+- Confirm that this is a restaurant and not another service
 - {specific_instruction}
 - Look for relevant information in menus, about pages, contact pages, or reservation systems
 - Extract and format the requested information clearly and accurately
@@ -170,20 +187,11 @@ Get {payload.info_type.value} information from {business.name} ({business.websit
 - Note the source of the information (which page/section)
 - If information varies by date/time, include those details
 - Output the information in a short and concise manner
-
-**Return JSON with:**
-- info_found: boolean
-- data: the requested information in clear, natural language format
-- source_section: which part of the website the info came from
-- last_updated: if date information is visible
-- additional_context: any relevant extra details
-- screenshots_taken: list of screenshot descriptions
-- limitations: any limitations or gaps in the information found
 """
         
         logger.debug(f"Built info instructions for {business.name}, type: {payload.info_type}")
         return instructions.strip()
-    
+
     def get_return_format_schema(self, intent: Intent) -> Dict[str, Any]:
         """
         Get the expected return format schema for validation.
@@ -219,6 +227,35 @@ Get {payload.info_type.value} information from {business.name} ({business.websit
                     "source_section": {"type": "string"},
                     "last_updated": {"type": "string"},
                     "additional_context": {"type": "string"},
+                    "screenshots_taken": {"type": "array", "items": {"type": "string"}},
+                    "limitations": {"type": "string"}
+                }
+            }
+        elif intent == Intent.RECOMMEND:
+            return {
+                "type": "object",
+                "required": ["recommendations_found", "recommendations"],
+                "properties": {
+                    "recommendations_found": {"type": "boolean"},
+                    "recommendations": {
+                        "type": "array",
+                        "maxItems": 2,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "cuisine_type": {"type": "string"},
+                                "price_range": {"type": "string"},
+                                "rating": {"type": "string"},
+                                "location": {"type": "string"},
+                                "hours": {"type": "string"},
+                                "website": {"type": "string"}
+                            },
+                            "required": ["name", "cuisine_type", "price_range"]
+                        }
+                    },
+                    "search_area": {"type": "string"},
+                    "budget_range": {"type": "string"},
                     "screenshots_taken": {"type": "array", "items": {"type": "string"}},
                     "limitations": {"type": "string"}
                 }

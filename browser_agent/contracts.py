@@ -17,6 +17,7 @@ class Intent(str, Enum):
     """Intent types for browser automation tasks."""
     RESERVE = "reserve"
     INFO = "info"
+    RECOMMEND = "recommend"
 
 
 class Status(str, Enum):
@@ -96,12 +97,20 @@ class InfoPayload(BaseModel):
     context_date: Optional[date] = None
     context_time: Optional[time] = None
 
+class RecommendPayload(BaseModel):
+    """Payload for information requests."""
+    model_config = ConfigDict(json_encoders={date: lambda v: v.isoformat(), time: lambda v: v.isoformat()})
+
+    user_query: str
+    area: str
+    budget: int
+
 
 # Policy and Configuration
 class Policy(BaseModel):
     """Automation policy configuration."""
     autonomy_level: str = "medium"  # low, medium, high
-    max_steps: int = 30
+    max_steps: int = 50
     take_screenshots: bool = True
     use_vision: bool = True
     max_failures: int = 3
@@ -115,7 +124,7 @@ class BrowserTask(BaseModel):
     business: TargetBusiness
     user: User
     intent: Intent
-    payload: Union[ReservePayload, InfoPayload]
+    payload: Union[ReservePayload, InfoPayload, RecommendPayload]
     policy: Policy = Field(default_factory=Policy)
     locale: str = "en-US"
     idempotency_key: Optional[str] = None
@@ -135,6 +144,15 @@ class BookingDetails(BaseModel):
     special_requests: Optional[str] = None
 
 class InfoResponse(BaseModel):
+    """Structured information response."""
+    model_config = ConfigDict(json_encoders={date: lambda v: v.isoformat(), time: lambda v: v.isoformat()})
+    
+    info_type: InfoType
+    data: Any  # The actual information content
+    additional_notes: Optional[str] = None
+    source_url: Optional[str] = None
+
+class RecommendResponse(BaseModel):
     """Structured information response."""
     model_config = ConfigDict(json_encoders={date: lambda v: v.isoformat(), time: lambda v: v.isoformat()})
     

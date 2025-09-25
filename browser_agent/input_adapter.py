@@ -12,7 +12,7 @@ import logging
 
 from contracts import (
     BrowserTask, TargetBusiness, User, Intent, InfoType, NextAction,
-    ReservePayload, InfoPayload, Policy, Status, BrowserAutomationResult,
+    ReservePayload, InfoPayload, RecommendPayload, Policy, Status, BrowserAutomationResult,
     Evidence
 )
 
@@ -57,8 +57,8 @@ class InputAdapter:
             
             # Validate intent
             intent_str = task_data.get("intent", "").lower()
-            if intent_str not in [Intent.RESERVE, Intent.INFO]:
-                raise InputValidationError(f"Invalid intent: {intent_str}. Must be 'reserve' or 'info'")
+            if intent_str not in [Intent.RESERVE, Intent.INFO, Intent.RECOMMEND]:
+                raise InputValidationError(f"Invalid intent: {intent_str}. Must be 'reserve', 'info', or 'recommend'")
             
             intent = Intent(intent_str)
             
@@ -137,12 +137,14 @@ class InputAdapter:
             phone=phone
         )
     
-    def _validate_payload(self, task_data: Dict[str, Any], intent: Intent) -> Union[ReservePayload, InfoPayload]:
+    def _validate_payload(self, task_data: Dict[str, Any], intent: Intent) -> Union[ReservePayload, InfoPayload, RecommendPayload]:
         """Validate payload based on intent type."""
         if intent == Intent.RESERVE:
             return self._validate_reservation_payload(task_data)
         elif intent == Intent.INFO:
             return self._validate_info_payload(task_data)
+        elif intent == Intent.RECOMMEND:
+            return self._validate_recommend_payload(task_data)
         else:
             raise InputValidationError(f"Unsupported intent: {intent}")
     
@@ -234,6 +236,38 @@ class InputAdapter:
             info_type=info_type,
             context_date=context_date,
             context_time=context_time
+        )
+    
+    def _validate_recommend_payload(self, task_data: Dict[str, Any]) -> RecommendPayload:
+        """Validate restaurant recommendation payload."""
+        recommend_data = task_data.get("recommend", {})
+        if not recommend_data:
+            raise InputValidationError("Recommend details are required for recommend intent")
+        
+        # Required fields
+        user_query = recommend_data.get("user_query", "").strip()
+        if not user_query:
+            raise InputValidationError("user_query is required for recommendations")
+        
+        area = recommend_data.get("area", "").strip()
+        if not area:
+            raise InputValidationError("area is required for recommendations")
+        
+        budget = recommend_data.get("budget")
+        if budget is None:
+            raise InputValidationError("budget is required for recommendations")
+        
+        try:
+            budget = int(budget)
+            if budget < 0 or budget > 1000:
+                raise InputValidationError("budget must be between 1 and 1000 euros")
+        except (ValueError, TypeError):
+            raise InputValidationError("budget must be a valid integer")
+        
+        return RecommendPayload(
+            user_query=user_query,
+            area=area,
+            budget=budget
         )
     
     def _validate_policy(self, policy_data: Dict[str, Any]) -> Policy:
