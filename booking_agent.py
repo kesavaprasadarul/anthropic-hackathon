@@ -171,9 +171,13 @@ class BookingAgent:
         return result
 
 # -------------------------
-# Global singleton instance for easy importing
+# Lazy singleton instance for easy importing
 # -------------------------
-booking_agent = BookingAgent()
+def get_booking_agent() -> BookingAgent:
+    """Lazy initialization of the global booking agent instance"""
+    if not hasattr(get_booking_agent, '_instance'):
+        get_booking_agent._instance = BookingAgent()
+    return get_booking_agent._instance
 
 # -------------------------
 # Convenience functions for backward compatibility
@@ -182,29 +186,83 @@ def create_appointment(start_iso: str, end_iso: str, summary: str, timezone: str
                       location: str = "TBD", description: str = "Auto-created by agent", 
                       calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
     """Convenience function to create an appointment"""
-    return booking_agent.create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
+    return get_booking_agent().create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
 
 def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
                       timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
     """Convenience function to check availability"""
-    return booking_agent.check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
+    return get_booking_agent().check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
 
 # -------------------------
-# Main
+# Debug Main Function
 # -------------------------
-def main() -> None:
-    # Example usage of the singleton BookingAgent
-    start_iso = "2025-10-27T12:00:00+02:00"  # Europe/Berlin on October 27, 2025 is CEST (UTC+02:00)
-    end_iso   = "2025-10-27T13:00:00+02:00"
-    summary   = "Haircut appointment"
-    timezone  = "Europe/Berlin"
-    location  = "TBD"
-    description = "Auto-created by agent after availability check."
+# def main() -> None:
+#     """Debug main function for testing the booking agent"""
+#     print("=== Testing BookingAgent (Lazy) ===")
+    
+#     # Test lazy initialization
+#     print("\n--- Testing lazy initialization ---")
+#     print("Creating booking agent instance...")
+#     agent = get_booking_agent()
+#     print(f"Agent created: {type(agent)}")
+    
+#     # Test availability check
+#     print("\n--- Testing availability check ---")
+#     try:
+#         availability = agent.check_availability(
+#             days_ahead=7,
+#             timezone="Europe/Berlin",
+#             work_start_hour=9,
+#             work_end_hour=18
+#         )
+#         print(f"Availability check successful: {type(availability)}")
+#         if isinstance(availability, dict) and "error" in availability:
+#             print(f"Error: {availability['error']}")
+#         else:
+#             print("Availability data retrieved successfully!")
+#     except Exception as e:
+#         print(f"Availability check failed: {e}")
+    
+#     # Test appointment creation
+#     print("\n--- Testing appointment creation ---")
+#     try:
+#         start_iso = "2025-10-27T12:00:00+02:00"
+#         end_iso = "2025-10-27T13:00:00+02:00"
+#         summary = "Test appointment"
+#         timezone = "Europe/Berlin"
+#         location = "Test location"
+#         description = "Debug test appointment"
+        
+#         result = agent.create_appointment(
+#             start_iso, end_iso, summary, timezone, location, description
+#         )
+#         print(f"Appointment creation result: {type(result)}")
+#         if isinstance(result, dict) and "error" in result:
+#             print(f"Error: {result['error']}")
+#         else:
+#             print("Appointment creation successful!")
+#     except Exception as e:
+#         print(f"Appointment creation failed: {e}")
+    
+#     # Test convenience functions
+#     print("\n--- Testing convenience functions ---")
+#     try:
+#         # Test create_appointment function
+#         result1 = create_appointment(
+#             "2025-10-28T14:00:00+02:00",
+#             "2025-10-28T15:00:00+02:00", 
+#             "Convenience test",
+#             "Europe/Berlin"
+#         )
+#         print(f"Convenience create_appointment: {type(result1)}")
+        
+#         # Test check_availability function
+#         result2 = check_availability(days_ahead=3, timezone="UTC")
+#         print(f"Convenience check_availability: {type(result2)}")
+        
+#     except Exception as e:
+#         print(f"Convenience functions failed: {e}")
 
-    # Use the singleton instance
-    result = booking_agent.create_appointment(start_iso, end_iso, summary, timezone, location, description)
-    print(result)
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
