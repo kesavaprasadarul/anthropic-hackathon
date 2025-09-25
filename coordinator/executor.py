@@ -1,21 +1,67 @@
 # /coordinator/executor.py
 
-import os
-import json
-import asyncio
-import google.generativeai as genai
-from google.ai import generativelanguage as glm
-from typing import List
+import os, json, asyncio
+from typing import List, Dict, Any
 
-from agents.MOCKS import mock_search_agent, mock_browser_agent, mock_calendar_agent, mock_calling_agent, AgentOutput
+from smolagents import Tool, CodeAgent
+from smolagents.models import LiteLLMModel
+
+from agents.MOCKS import (
+    mock_search_agent, mock_browser_agent, mock_calendar_agent, mock_calling_agent, AgentOutput
+)
 from database.models import ProcessStep
 from .planner import Planner
 
-AVAILABLE_TOOLS = {
-    "mock_search_agent": mock_search_agent,
-    "mock_browser_agent": mock_browser_agent,
-    "mock_calendar_agent": mock_calendar_agent,
-    "mock_calling_agent": mock_calling_agent,
+SYSTEM_PROMPT = "You are an execution agent. Call the available function exactly once with JSON args. Return the tool result only; do not add commentary."
+
+# --- Thin Tool wrappers for smolagents (one arg: prompt) ---
+
+class _BaseMockTool(Tool):
+    inputs = {"prompt": {"type": "string", "description": "Instruction for the tool."}}
+    output_type = "string"  # return JSON string of AgentOutput
+
+    def _call_sync(self, coro):
+        # Run async mock tools safely whether we're in an event loop or not
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
+        else:
+            # If already in a loop, run in a separate task and wait
+            return loop.run_until_complete(coro)  # works if called from non-async context inside agent
+
+    def _return_json(self, ao: AgentOutput) -> str:
+        return json.dumps(ao.model_dump(), ensure_ascii=False)
+
+class SearchTool(_BaseMockTool):
+    name = "mock_search_agent"
+    description = "Find & compare options and return website/phone/address."
+    def forward(self, prompt: str) -> str:
+        return self._return_json(self._call_sync(mock_search_agent(prompt)))
+
+class BrowserTool(_BaseMockTool):
+    name = "mock_browser_agent"
+    description = "Perform a specific action on a known website (e.g., submit booking form)."
+    def forward(self, prompt: str) -> str:
+        return self._return_json(self._call_sync(mock_browser_agent(prompt)))
+
+class CalendarTool(_BaseMockTool):
+    name = "mock_calendar_agent"
+    description = "Create or modify Google Calendar events."
+    def forward(self, prompt: str) -> str:
+        return self._return_json(self._call_sync(mock_calendar_agent(prompt)))
+
+class CallingTool(_BaseMockTool):
+    name = "mock_calling_agent"
+    description = "Place a phone call to the business to book."
+    def forward(self, prompt: str) -> str:
+        return self._return_json(self._call_sync(mock_calling_agent(prompt)))
+
+TOOLS_BY_NAME: Dict[str, Tool] = {
+    "mock_search_agent": SearchTool(),
+    "mock_browser_agent": BrowserTool(),
+    "mock_calendar_agent": CalendarTool(),
+    "mock_calling_agent": CallingTool(),
 }
 
 class Executor:
@@ -23,111 +69,82 @@ class Executor:
         self.process_id = process_id
         self.original_prompt = original_prompt
         self.run_history = run_history
-        self.model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
-            tools=list(AVAILABLE_TOOLS.values())
+        self.model = LiteLLMModel(
+            model_id=os.getenv("EXECUTOR_MODEL", "gemini/gemini-2.5-flash-lite"),
+            api_key=(os.getenv("GEMINI_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+        )
+
+    def _make_agent_for_step(self, tool_name: str) -> CodeAgent:
+        tool = TOOLS_BY_NAME.get(tool_name)
+        if not tool:
+            # Build a “no-op” agent that will immediately return an error
+            class NoopTool(Tool):
+                name = "noop"
+                description = "Unknown tool."
+                inputs = {"prompt": {"type": "string"}}
+                output_type = "string"
+                def forward(self, prompt: str) -> str:
+                    return json.dumps({"status":"failed","error":f"Unknown tool: {tool_name}"})
+            tool = NoopTool()
+        # Agent only sees the single tool we want it to call
+        return CodeAgent(
+            tools=[tool],
+            model=self.model,
         )
 
     async def _execute_step(self, step: ProcessStep, context: str) -> AgentOutput:
-        # Step now receives context from previous steps
-        prompt = f"Context from previous steps:\n{context}\n\nYour task now:\n{step.prompt_message}"
-        
         print(f"\n[{self.process_id}] --- Executing Step: '{step.step_name}' ---")
-        print(f"[{self.process_id}] Prompt for model: '{prompt}'")
+        user_prompt = SYSTEM_PROMPT + f" Context from previous steps:\n{context}\n\nYour task now:\n{step.prompt_message}"
+        print(f"[{self.process_id}] Prompt for model: '{user_prompt}'")
 
-        chat = self.model.start_chat()
-        response = await chat.send_message_async(prompt)
+        agent = self._make_agent_for_step(step.tool_module_name)
+        # smolagents handles tool-calling loop internally
+        tool_result_str = agent.run(task=user_prompt)
 
+        # Tools return AgentOutput as JSON string; parse it back
         try:
-            function_call = response.candidates[0].content.parts[0].function_call
-        except (IndexError, AttributeError):
-            print(f"[{self.process_id}] Model provided a direct answer.")
-            return AgentOutput(status="completed", result=response.text)
+            payload = json.loads(tool_result_str)
+            ao = AgentOutput(**payload)
+        except Exception:
+            # If a tool returned plain text, wrap it
+            ao = AgentOutput(status="completed", result=tool_result_str)
 
-        tool_name = function_call.name
-        
-        # --- THIS IS THE FIX ---
-        # If the model hallucinates an empty function name, we fail the step immediately
-        # and do NOT proceed to the next API call, which prevents the crash.
-        if not tool_name:
-            print(f"[{self.process_id}] Error: Model returned a function call with an empty name.")
-            return AgentOutput(status="failed", error="Model failed to select a valid tool.")
-        # --- END FIX ---
-        
-        tool_args = dict(function_call.args) if function_call.args is not None else {}
+        print(f"[{self.process_id}] Tool Result: status='{ao.status}' result={ao.result!r} error={ao.error}")
+        return ao
 
-        print(f"[{self.process_id}] 🤔 Model chose to call function: '{tool_name}'")
-        print(f"[{self.process_id}]   Arguments: {tool_args}")
-
-        if tool_name in AVAILABLE_TOOLS:
-            # We now pass the structured arguments to the tool for better performance
-            # For mocks, we'll just use the prompt, but a real agent would use tool_args
-            tool_function = AVAILABLE_TOOLS[tool_name]
-            tool_result = await tool_function(step.prompt_message)
-        else:
-            print(f"[{self.process_id}] Error: Model tried to call unknown tool '{tool_name}'")
-            tool_result = AgentOutput(status="failed", error=f"Unknown tool: {tool_name}")
-
-        print(f"[{self.process_id}] Tool Result: {tool_result}")
-        
-        response = await chat.send_message_async(
-            content=glm.Part(function_response=glm.FunctionResponse(
-                name=tool_name,
-                response={"result": json.dumps(tool_result.model_dump())}
-            ))
-        )
-        
-        final_answer = response.candidates[0].content.parts[0].text
-        print(f"[{self.process_id}] Final Answer from model: '{final_answer}'")
-        
-        # The final result of the step is the result from the tool itself.
-        # The model's final_answer is just a human-friendly summary.
-        return tool_result
-
-    async def run(self, plan: list[ProcessStep]):
+    async def run(self, plan: List[ProcessStep]):
         print(f"\n[{self.process_id}] ======= STARTING DYNAMIC EXECUTION =======")
-        completed_steps = {} # Stores step_id -> result
-
+        completed_steps: Dict[str, AgentOutput] = {}
         i = 0
         while i < len(plan):
-            step = plan[i]
-            i += 1
-
-            if step.status != "pending": continue
-
-            if not all(dep_id in completed_steps for dep_id in step.dependencies):
-                plan.append(step)
+            step = plan[i]; i += 1
+            if step.status != "pending":
                 continue
+            if not all(dep_id in completed_steps for dep_id in step.dependencies):
+                plan.append(step); continue
 
-            # --- CONTEXT PASSING ---
-            # Create context from the results of dependency steps
-            context = ""
-            for dep_id in step.dependencies:
-                prev_result = completed_steps.get(dep_id)
-                if prev_result:
-                    context += f"The result of a previous step was: {prev_result.result}\n"
-            if not context:
-                context = "This is the first step."
-            
+            # Build context
+            ctx = "\n".join(
+                f"The result of a previous step was: {completed_steps[d].result}"
+                for d in step.dependencies if d in completed_steps
+            ) or "This is the first step."
+
             step.status = "running"
-            result = await self._execute_step(step, context)
+            result = await self._execute_step(step, ctx)
             step.output_result = result.model_dump()
-            
+
             if result.status == "failed":
                 step.status = "failed"
                 self.run_history.append(f"ATTEMPTED: '{step.step_name}' but it FAILED with error: {result.error}")
                 print(f"[{self.process_id}] Step '{step.step_name}' failed. Triggering re-planning...")
-                
                 planner = Planner(self.process_id)
-                recovery_steps = await planner.generate_recovery_plan(
-                    self.original_prompt, self.run_history, step
-                )
+                recovery_steps = await planner.generate_recovery_plan(self.original_prompt, self.run_history, step)
                 if recovery_steps:
                     print(f"[{self.process_id}] Received {len(recovery_steps)} recovery steps. Splicing into plan.")
-                    for r_step in reversed(recovery_steps):
-                        # Make new steps depend on the last successful step before the failure
-                        if step.dependencies: r_step.dependencies = [step.dependencies[-1]]
-                        plan.insert(i, r_step)
+                    for r in reversed(recovery_steps):
+                        if step.dependencies:
+                            r.dependencies = [step.dependencies[-1]]
+                        plan.insert(i, r)
                 else:
                     print(f"[{self.process_id}] Planner did not return a recovery plan. Ending execution.")
                     break
@@ -135,5 +152,5 @@ class Executor:
                 step.status = "completed"
                 self.run_history.append(f"SUCCESS: '{step.step_name}'. Result: {result.result}")
                 completed_steps[step.step_id] = result
-        
+
         print(f"[{self.process_id}] ======== EXECUTION FINISHED ========")

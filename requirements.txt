@@ -3,11 +3,14 @@
 fastapi
 uvicorn[standard]
 pydantic
-google-generativeai
+litellm
 python-dotenv
 requests
 smolagents
 beautifulsoup4
 lxml
-# or openai, if you prefer
+# Model-specific packages (install as needed):
+# google-generativeai  # for Gemini models
+# openai              # for OpenAI models
+# anthropic           # for Claude models
 
