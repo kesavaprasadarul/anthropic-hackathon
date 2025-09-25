@@ -1,4 +1,13 @@
-requests>=2.31.0
-smolagents>=0.1.0
-beautifulsoup4>=4.12.0
-lxml>=4.9.0
+# requirements.txt
+
+fastapi
+uvicorn[standard]
+pydantic
+google-generativeai
+python-dotenv
+requests
+smolagents
+beautifulsoup4
+lxml
+# or openai, if you prefer
+
