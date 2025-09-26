@@ -423,6 +423,47 @@ webhook_payload = {
 }
 ```
 
+### Integrating with Smolagents
+
+The `calling_agent.py` helper exposes both a ready-to-use smolagents tool and a
+lightweight wrapper that runs the LLM for you:
+
+```python
+from calling_agent import CallingModuleAgent
+
+task_data = {
+    "business": {"phone": "+1234567890", "name": "Bella Vista"},
+    "user": {"name": "Maria Schmidt"},
+    "intent": "reserve",
+    "reservation": {
+        "date": "2024-10-12",
+        "time_window": {"start_time": "19:00", "end_time": "21:00"},
+        "party_size": 2,
+    },
+}
+
+agent = CallingModuleAgent(base_url="http://localhost:8000")
+result = agent.start_call(task_data)
+print(result["status"], result.get("message"))
+```
+
+To compose your own `CodeAgent`, import the tool directly and plug it into any
+smolagents-compatible model:
+
+```python
+from smolagents import CodeAgent
+from smolagents.models import LiteLLMModel
+from calling_agent import StartPhoneCallTool
+
+tool = StartPhoneCallTool(base_url="http://localhost:8000")
+model = LiteLLMModel(model_id="anthropic/claude-3-haiku-20240307", api_key="<api-key>")
+agent = CodeAgent(tools=[tool], model=model)
+```
+
+> **Tip:** If you import these helpers from outside the `agents/phone-calls`
+> folder, add the directory to `sys.path` first (the folder name contains a
+> dash, so Python cannot resolve it as a package automatically).
+
 ## Status Vocabulary
 
 The module returns standardized status values:

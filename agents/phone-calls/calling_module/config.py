@@ -14,7 +14,13 @@ try:
     load_dotenv()
 except ImportError:
     pass
- 
+
+
+def _get_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 @dataclass
 class ElevenLabsConfig:
@@ -47,6 +53,8 @@ class ServiceConfig:
     default_timeout_seconds: int = 100
     log_level: str = "INFO"
     environment: str = "development"
+    force_test_call_number: bool = False
+    test_call_number: Optional[str] = None
 
 
 @dataclass
@@ -99,7 +107,9 @@ def load_config() -> CallingModuleConfig:
         max_call_duration_minutes=int(os.getenv("MAX_CALL_DURATION_MINUTES", "4")),
         default_timeout_seconds=int(os.getenv("DEFAULT_TIMEOUT_SECONDS", "300")),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
-        environment=os.getenv("ENVIRONMENT", "development")
+        environment=os.getenv("ENVIRONMENT", "development"),
+        force_test_call_number=_get_bool("CALLING_FORCE_TEST_NUMBER", True),
+        test_call_number=os.getenv("CALLING_TEST_NUMBER", "+4915117831779")
     )
     
     return CallingModuleConfig(

@@ -336,7 +336,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=get_config().service.environment == "development",
         log_level=get_config().service.log_level.lower()
     )

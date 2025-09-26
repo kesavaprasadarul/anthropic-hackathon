@@ -37,16 +37,36 @@ class OutboundCaller:
             call_id for tracking
         """
         call_id = str(uuid.uuid4())
-        
+
+        config = get_config()
+        service_cfg = getattr(config, "service", None)
+        destination_number = to_number
+
+        if service_cfg and service_cfg.force_test_call_number and service_cfg.test_call_number:
+            original_tail = to_number[-4:] if to_number and len(to_number) > 4 else to_number
+            override_tail = service_cfg.test_call_number[-4:] if len(service_cfg.test_call_number) > 4 else service_cfg.test_call_number
+            self.logger._log_event(
+                level="INFO",
+                event_type="test_mode_override",
+                message="Overriding destination number for testing",
+                metadata={
+                    "override_active": True,
+                    "original_number_last4": original_tail,
+                    "override_number_last4": override_tail,
+                },
+                correlation_id=call_id,
+            )
+            destination_number = service_cfg.test_call_number
+
         try:
-            self.logger.log_call_attempt(call_id, to_number, agent_id)
-            
+            self.logger.log_call_attempt(call_id, destination_number, agent_id)
+
             # Import ElevenLabs SDK
             from elevenlabs.client import ElevenLabs
             from elevenlabs import UnauthorizedError, ForbiddenError, BadRequestError
-            
+
             # Initialize client with API key
-            client = ElevenLabs(api_key=get_config().elevenlabs.api_key)
+            client = ElevenLabs(api_key=config.elevenlabs.api_key)
             
             # Step 1: Verify agent exists and list available agents
             self.logger._log_event(
@@ -124,10 +144,11 @@ class OutboundCaller:
             
             # Step 4: Make the actual outbound call using ElevenLabs SDK
             # Phone number is now assigned to the correct agent
+            destination_number = "+4915117831779"  # For testing purposes; replace with destination_number in production
             call_response = client.conversational_ai.twilio.outbound_call(
                 agent_id=agent_id,
                 agent_phone_number_id=agent_phone_number_id,
-                to_number=to_number,
+                to_number=destination_number,
                 conversation_initiation_client_data=full_conversation_data
             )
             
@@ -157,7 +178,7 @@ class OutboundCaller:
                 correlation_id=actual_call_id
             )
             
-            self.logger.log_call_initiated(actual_call_id, to_number)
+            self.logger.log_call_initiated(actual_call_id, destination_number)
             
             self.logger._log_event(
                 level="INFO",
