@@ -1,14 +1,73 @@
+import re
 import os
 import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Any, Optional
 
 from smolagents import Tool, CodeAgent
 from smolagents.models import LiteLLMModel
 
-from tools import GoogleCalendarCreateEventTool, GoogleCalendarAvailabilityTool
+from ..contracts import AgentOutput
+from .tools import GoogleCalendarCreateEventTool, GoogleCalendarAvailabilityTool
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+
+_FENCE_RE = re.compile(r'^```(?:json)?\s*\r?\n(.*)\r?\n```$', re.IGNORECASE | re.DOTALL)
+
+def _strip_fences(s: str) -> str:
+    m = _FENCE_RE.match(s.strip())
+    return m.group(1).strip() if m else s.strip()
+
+def _to_agent_output(obj: Any) -> AgentOutput:
+    """Best-effort coercion to AgentOutput."""
+    # Already an AgentOutput
+    if isinstance(obj, AgentOutput):
+        return obj
+
+    # Bytes → str
+    if isinstance(obj, (bytes, bytearray)):
+        obj = obj.decode("utf-8", "replace")
+
+    # String → try JSON → else wrap as completed/result
+    if isinstance(obj, str):
+        s = _strip_fences(obj)
+        try:
+            obj = json.loads(s)
+        except Exception:
+            return AgentOutput(status="completed", result=s, error=None)
+
+    # Pydantic/BaseModel-ish
+    if hasattr(obj, "model_dump"):
+        obj = obj.model_dump()
+
+    # Dict → try strict validate; if not present, infer
+    if isinstance(obj, dict):
+        # Perfect match
+        if {"status", "result", "error"} <= obj.keys():
+            try:
+                return AgentOutput.model_validate(obj)
+            except ValidationError:
+                pass
+        # Infer minimal AgentOutput
+        status = obj.get("status")
+        if status not in ("completed", "failed"):
+            status = "failed" if "error" in obj else "completed"
+        result = obj.get("result")
+        error = obj.get("error")
+        if status == "completed" and result is None:
+            # Use the dict itself as a summary if no result given
+            result = json.dumps(obj, ensure_ascii=False)
+        if status == "failed" and error is None:
+            error = json.dumps(obj, ensure_ascii=False)
+        return AgentOutput(status=status, result=result if status=="completed" else None, error=error if status=="failed" else None)
+
+    # List/other → stringify as a completed result
+    try:
+        return AgentOutput(status="completed", result=json.dumps(obj, ensure_ascii=False), error=None)
+    except Exception:
+        return AgentOutput(status="completed", result=str(obj), error=None)
 
 # -------------------------
 # Minimal no-op tool ("call another thing" = pass)
@@ -76,22 +135,36 @@ class BookingAgent:
             if self._token is None:
                 creds = get_creds()
                 self._token = creds.token
+
+            model_kwargs = {}
+            model_kwargs["response_mime_type"] = "application/json"
             
             model = LiteLLMModel(
-                model_id="gemini/gemini-2.5-flash-lite",
-                api_key=os.getenv("GEMINI_KEY"),
+                model_id="anthropic/claude-3-haiku-20240307",
+                api_key=os.getenv("ANTHROPIC_API_KEY"),
+                # model_id="gemini/gemini-2.5-flash",
+                # api_key=os.getenv("GOOGLE_API_KEY"),
+                # model_kwargs=model_kwargs,
             )
             tools = [
                 GoogleCalendarAvailabilityTool(self._token),
                 NoOpTool(),
                 GoogleCalendarCreateEventTool(self._token),
             ]
-            self._agent = CodeAgent(tools=tools, model=model)
+            self._agent = CodeAgent(tools=tools, model=model, additional_authorized_imports=['json'])
         return self._agent
     
-    def create_appointment(self, start_iso: str, end_iso: str, summary: str, timezone: str,
-                          location: str = "TBD", description: str = "Auto-created by agent", 
-                          calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
+    def create_appointment(
+        self,
+        start_iso: str = "2025-09-27T11:00:00+02:00",
+        end_iso: str   = "2025-09-27T12:00:00+02:00",
+        summary: str   = "Appointment",
+        timezone: str  = "Europe/Berlin",
+        location: str = "TBD",
+        description: str = "Auto-created by agent",
+        calendar_id: str = "primary",
+        attendees: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """
         Create an appointment in the user's calendar.
         
@@ -108,6 +181,9 @@ class BookingAgent:
         Returns:
             Dict with creation result
         """
+        now = datetime.now(ZoneInfo("Europe/Berlin"))
+        now_iso = now.isoformat(timespec="seconds")  # e.g., 2025-09-26T14:37:12+02:00
+
         task = f"""
         You are a strict calendar assistant. ONLY use the following tools:
         1) GoogleCalendarAvailabilityTool to check the user's calendar availability for the exact time range provided.
@@ -118,6 +194,8 @@ class BookingAgent:
         DO NOT transform or post-process tool outputs; just use their results to decide next steps.
         If the slot is busy, STOP and return a message that the time is not available.
         If the slot is free, call noop_other_thing (with a short reason), then create the event.
+
+        Current datetime (Europe/Berlin): {now_iso}
 
         Parameters for GoogleCalendarCreateEventTool:
         - summary: "{summary}"
@@ -137,8 +215,11 @@ class BookingAgent:
         """
         
         agent = self._get_agent()
-        result = agent.run(task=task)
-        return result
+        try:
+            raw = agent.run(task=task)
+        except Exception as e:
+            return AgentOutput(status="failed", result=None, error=f"Agent error: {e}")
+        return _to_agent_output(raw)
     
     def check_availability(self, days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
                           timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
@@ -167,31 +248,35 @@ class BookingAgent:
         """
         
         agent = self._get_agent()
-        result = agent.run(task=task)
-        return result
+        try:
+            raw = agent.run(task=task)
+        except Exception as e:
+            return AgentOutput(status="failed", result=None, error=f"Agent error: {e}")
+        return _to_agent_output(raw)
+
 
 # -------------------------
 # Lazy singleton instance for easy importing
 # -------------------------
-def get_booking_agent() -> BookingAgent:
-    """Lazy initialization of the global booking agent instance"""
-    if not hasattr(get_booking_agent, '_instance'):
-        get_booking_agent._instance = BookingAgent()
-    return get_booking_agent._instance
+# def get_booking_agent() -> BookingAgent:
+#     """Lazy initialization of the global booking agent instance"""
+#     if not hasattr(get_booking_agent, '_instance'):
+#         get_booking_agent._instance = BookingAgent()
+#     return get_booking_agent._instance
 
-# -------------------------
-# Convenience functions for backward compatibility
-# -------------------------
-def create_appointment(start_iso: str, end_iso: str, summary: str, timezone: str,
-                      location: str = "TBD", description: str = "Auto-created by agent", 
-                      calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Convenience function to create an appointment"""
-    return get_booking_agent().create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
+# # -------------------------
+# # Convenience functions for backward compatibility
+# # -------------------------
+# def create_appointment(start_iso: str, end_iso: str, summary: str, timezone: str,
+#                       location: str = "TBD", description: str = "Auto-created by agent", 
+#                       calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
+#     """Convenience function to create an appointment"""
+#     return get_booking_agent().create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
 
-def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
-                      timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
-    """Convenience function to check availability"""
-    return get_booking_agent().check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
+# def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
+#                       timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
+#     """Convenience function to check availability"""
+#     return get_booking_agent().check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
 
 # -------------------------
 # Debug Main Function
