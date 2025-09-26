@@ -224,6 +224,18 @@ class PostCallHandler:
             # Get call info for correlation
             call_info = caller.get_call_info(call_id) if call_id else None
             
+            transcript_info = {
+                            "conversation_id": call_id,
+                            "total_turns": len(transcript_turns),
+                            "transcript_turns": [
+                                {
+                                    "role": turn.get("role", "unknown") if isinstance(turn, dict) else "not_dict",
+                                    "text": (turn.get("text") or turn.get("message", "")) if isinstance(turn, dict) else str(turn),
+                                    "timestamp": turn.get("timestamp", "") if isinstance(turn, dict) else ""
+                                } for turn in transcript_turns[:10]  # Limit to first 10 turns for logging
+                            ]
+                        }
+            
             result = CallResult(
                 status=status,
                 core_artifact=artifact,
@@ -234,7 +246,8 @@ class PostCallHandler:
                 call_id=call_id,
                 task_id=call_info.get("task_id") if call_info else None,
                 idempotency_key=call_info.get("idempotency_key") if call_info else None,
-                completed_at=datetime.utcnow()
+                completed_at=datetime.utcnow(),
+                transcript = transcript_info
             )
             
             # Update call tracking

@@ -6,6 +6,8 @@ Provides the main entry points that the supervisor agent calls.
 
 from typing import Optional, Dict, Any
 from datetime import datetime
+import asyncio
+from threading import Lock
 
 from .contracts import CallTask, CallResult, ValidationResult
 from .input_adapter import InputAdapter
@@ -24,6 +26,9 @@ class CallingModuleRouter:
         self._outbound_caller = None
         self._postcall_handler = None
         self._logger = None
+        self._pending_results: Dict[str, asyncio.Future] = {}
+        self._completed_results: Dict[str, Dict[str, Any]] = {}
+        self._pending_lock = Lock()
     
     @property
     def input_adapter(self):
@@ -134,10 +139,128 @@ class CallingModuleRouter:
         try:
             result = self.postcall_handler.process_webhook(webhook_payload)
             self.logger.log_result_normalized(result)
+            serialized = self.serialize_call_result(result)
+            if serialized.get("call_id"):
+                self.notify_call_result(serialized["call_id"], serialized)
             return result
         except Exception as e:
             self.logger.log_postcall_error(str(e))
+            call_id = webhook_payload.get("call_id") or webhook_payload.get("conversation_id")
+            if call_id:
+                self.notify_call_error(call_id, RuntimeError(f"Failed to process post-call webhook: {str(e)}"))
             raise RuntimeError(f"Failed to process post-call webhook: {str(e)}")
+
+    def serialize_call_result(self, result: CallResult) -> Dict[str, Any]:
+        """Convert CallResult to dict for API responses."""
+        result_dict: Dict[str, Any] = {
+            "status": result.status.value,
+            "message": result.message,
+            "next_action": result.next_action.value,
+            "call_id": result.call_id,
+            "task_id": result.task_id,
+            "idempotency_key": result.idempotency_key,
+            "completed_at": result.completed_at.isoformat() if result.completed_at else None,
+            "transcript": result.transcript
+        }
+
+        if result.core_artifact:
+            result_dict["core_artifact"] = {
+                "booking_reference": result.core_artifact.booking_reference,
+                "confirmed_date": result.core_artifact.confirmed_date.isoformat() if result.core_artifact.confirmed_date else None,
+                "confirmed_time": result.core_artifact.confirmed_time.isoformat() if result.core_artifact.confirmed_time else None,
+                "party_size": result.core_artifact.party_size,
+                "total_cost": result.core_artifact.total_cost,
+                "confirmation_code": result.core_artifact.confirmation_code,
+                "special_instructions": result.core_artifact.special_instructions
+            }
+
+        if result.observations:
+            result_dict["observations"] = {
+                "offered_alternatives": result.observations.offered_alternatives,
+                "online_booking_hints": result.observations.online_booking_hints,
+                "business_hours": result.observations.business_hours,
+                "cancellation_policy": result.observations.cancellation_policy,
+                "payment_methods": result.observations.payment_methods,
+                "policies_mentioned": result.observations.policies_mentioned
+            }
+
+        if result.evidence:
+            result_dict["evidence"] = {
+                "provider_call_id": result.evidence.provider_call_id,
+                "call_duration_seconds": result.evidence.call_duration_seconds,
+                "transcript_url": result.evidence.transcript_url,
+                "recording_url": result.evidence.recording_url
+            }
+
+        return result_dict
+
+    async def wait_for_result(self, call_id: str, timeout: Optional[float] = None) -> Dict[str, Any]:
+        """Wait for post-call result corresponding to call_id."""
+        loop = asyncio.get_running_loop()
+        future = self._get_or_create_future(call_id, loop)
+        try:
+            return await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError:
+            with self._pending_lock:
+                self._pending_results.pop(call_id, None)
+            raise
+
+    def notify_call_result(self, call_id: str, result: Dict[str, Any]):
+        """Resolve pending waiter with successful result."""
+        if not call_id:
+            return
+        with self._pending_lock:
+            future = self._pending_results.pop(call_id, None)
+            if future is not None:
+                loop = future.get_loop()
+
+                def _set_result():
+                    if not future.done():
+                        future.set_result(result)
+
+                if loop.is_running():
+                    loop.call_soon_threadsafe(_set_result)
+                else:
+                    _set_result()
+            else:
+                self._completed_results[call_id] = result
+
+    def notify_call_error(self, call_id: str, error: Exception):
+        """Resolve pending waiter with an error."""
+        if not call_id:
+            return
+        with self._pending_lock:
+            future = self._pending_results.pop(call_id, None)
+            if future is not None:
+                loop = future.get_loop()
+
+                def _set_exception():
+                    if not future.done():
+                        future.set_exception(error)
+
+                if loop.is_running():
+                    loop.call_soon_threadsafe(_set_exception)
+                else:
+                    _set_exception()
+            else:
+                self._completed_results[call_id] = error
+
+    def _get_or_create_future(self, call_id: str, loop: asyncio.AbstractEventLoop) -> asyncio.Future:
+        with self._pending_lock:
+            if call_id in self._completed_results:
+                stored = self._completed_results.pop(call_id)
+                future = loop.create_future()
+                if isinstance(stored, Exception):
+                    future.set_exception(stored)
+                else:
+                    future.set_result(stored)
+                return future
+
+            future = self._pending_results.get(call_id)
+            if future is None or future.done():
+                future = loop.create_future()
+                self._pending_results[call_id] = future
+            return future
 
 
 # Global router instance

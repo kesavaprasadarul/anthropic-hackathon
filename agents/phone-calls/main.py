@@ -7,12 +7,20 @@ Provides HTTP endpoints for the supervisor agent and webhook handlers.
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any
+import asyncio
 import uvicorn
 import hmac
 import hashlib
 import base64
 
-from calling_module import start_call, on_postcall
+from calling_module import (
+    start_call,
+    on_postcall,
+    wait_for_call_result,
+    serialize_call_result,
+    notify_call_error,
+    notify_call_result,
+)
 from calling_module.tool_webhook import tool_handler
 from calling_module.observability import ObservabilityLogger
 from calling_module.config import get_config
@@ -117,17 +125,26 @@ async def start_call_endpoint(request_data: Dict[str, Any]):
     
     This is the main endpoint that the supervisor agent calls to initiate calls.
     """
+    config = get_config()
     try:
         call_id = start_call(request_data)
-        return {
-            "success": True,
-            "call_id": call_id,
-            "message": "Call initiated successfully"
-        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    timeout = config.service.default_timeout_seconds
+    try:
+        result_dict = await wait_for_call_result(call_id, timeout=timeout)
+    except asyncio.TimeoutError:
+        notify_call_error(call_id, TimeoutError("Post-call result timed out"))
+        raise HTTPException(status_code=504, detail="Timed out waiting for post-call result")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    return result_dict
 
 
 @app.post("/postcall")
@@ -167,7 +184,7 @@ async def postcall_webhook(request: Request):
                 "elevenlabs_signature_header": request.headers.get('ElevenLabs-Signature', 'missing'),
                 "body_length": len(raw_body)
             },
-                correlation_id=correlation_id
+            correlation_id=correlation_id
         )
         
         if webhook_secret:
@@ -231,46 +248,8 @@ async def postcall_webhook(request: Request):
         )
         
         result = on_postcall(request_data)
-        
-        # Convert result to dict for JSON response
-        result_dict = {
-            "status": result.status.value,
-            "message": result.message,
-            "next_action": result.next_action.value,
-            "call_id": result.call_id,
-            "task_id": result.task_id,
-            "idempotency_key": result.idempotency_key,
-            "completed_at": result.completed_at.isoformat() if result.completed_at else None
-        }
-        
-        # Add artifact if present
-        if result.core_artifact:
-            result_dict["core_artifact"] = {
-                "booking_reference": result.core_artifact.booking_reference,
-                "confirmed_date": result.core_artifact.confirmed_date.isoformat() if result.core_artifact.confirmed_date else None,
-                "confirmed_time": result.core_artifact.confirmed_time.isoformat() if result.core_artifact.confirmed_time else None,
-                "party_size": result.core_artifact.party_size,
-                "total_cost": result.core_artifact.total_cost,
-                "confirmation_code": result.core_artifact.confirmation_code
-            }
-        
-        # Add observations if present
-        if result.observations:
-            result_dict["observations"] = {
-                "offered_alternatives": result.observations.offered_alternatives,
-                "online_booking_hints": result.observations.online_booking_hints,
-                "business_hours": result.observations.business_hours,
-                "cancellation_policy": result.observations.cancellation_policy,
-                "payment_methods": result.observations.payment_methods
-            }
-        
-        # Add evidence if present
-        if result.evidence:
-            result_dict["evidence"] = {
-                "provider_call_id": result.evidence.provider_call_id,
-                "call_duration_seconds": result.evidence.call_duration_seconds
-                # Exclude transcript/recording URLs and webhook payload for security
-            }
+        result_dict = serialize_call_result(result)
+        notify_call_result(result_dict.get("call_id"), result_dict)
             
         logger._log_event(
             level="INFO",
@@ -283,6 +262,20 @@ async def postcall_webhook(request: Request):
         
         return result_dict
         
+    except HTTPException as http_exc:
+        logger._log_event(
+            level="ERROR",
+            event_type="postcall_webhook_error",
+            message=f"Post-call webhook failed: {http_exc.detail}",
+            metadata={"error": http_exc.detail}
+        )
+        call_id_for_error = (
+            locals().get("correlation_id")
+            if isinstance(locals().get("correlation_id"), str) and locals().get("correlation_id") != "unknown"
+            else None
+        )
+        notify_call_error(call_id_for_error, http_exc)
+        raise http_exc
     except Exception as e:
         logger._log_event(
             level="ERROR",
@@ -290,6 +283,12 @@ async def postcall_webhook(request: Request):
             message=f"Post-call webhook failed: {str(e)}",
             metadata={"error": str(e)}
         )
+        call_id_for_error = (
+            locals().get("correlation_id")
+            if isinstance(locals().get("correlation_id"), str) and locals().get("correlation_id") != "unknown"
+            else None
+        )
+        notify_call_error(call_id_for_error, e if isinstance(e, Exception) else RuntimeError(str(e)))
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
 
 

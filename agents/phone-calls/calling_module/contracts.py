@@ -187,6 +187,7 @@ class CallResult:
     next_action: NextAction = NextAction.NONE
     evidence: Optional[CallEvidence] = None
     message: str = ""
+    transcript: Optional[str] = None  # Full call transcript
     
     # Metadata
     call_id: Optional[str] = None

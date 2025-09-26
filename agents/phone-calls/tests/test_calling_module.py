@@ -5,6 +5,7 @@ Table-driven tests with mocks for all major scenarios.
 """
 
 import pytest
+import asyncio
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, time, timedelta
 
@@ -317,6 +318,33 @@ class TestRouterIntegration:
         assert result.status == CallStatus.COMPLETED
         assert result.call_id == "call_123"
         mock_handler_instance.process_webhook.assert_called_once_with(webhook_payload)
+
+    @pytest.mark.asyncio
+    async def test_wait_for_result_success(self):
+        """Ensure wait_for_result resolves when notify_call_result is invoked."""
+        call_id = "call_async_success"
+
+        async def emit_result():
+            await asyncio.sleep(0.01)
+            self.router.notify_call_result(call_id, {"call_id": call_id, "status": "completed"})
+
+        asyncio.create_task(emit_result())
+        result = await self.router.wait_for_result(call_id, timeout=1)
+        assert result["status"] == "completed"
+        assert result["call_id"] == call_id
+
+    @pytest.mark.asyncio
+    async def test_wait_for_result_error(self):
+        """Ensure wait_for_result propagates errors via notify_call_error."""
+        call_id = "call_async_error"
+
+        async def emit_error():
+            await asyncio.sleep(0.01)
+            self.router.notify_call_error(call_id, RuntimeError("call failed"))
+
+        asyncio.create_task(emit_error())
+        with pytest.raises(RuntimeError, match="call failed"):
+            await self.router.wait_for_result(call_id, timeout=1)
 
 
 class TestCallScenarios:
