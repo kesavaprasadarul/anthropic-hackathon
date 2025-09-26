@@ -5,7 +5,7 @@ from typing import Any, Optional, Dict, List
 from datetime import datetime
 import json
 
-from browser_use import Agent, ChatGoogle
+from browser_use import Agent, ChatGoogle, Browser
 from dotenv import load_dotenv
 
 from contracts import BrowserTask, BrowserAutomationResult, Evidence, Status, NextAction, BrowserUseResult
@@ -63,6 +63,7 @@ class BrowserExecutor:
             # Create browser agent
             agent = Agent(
                 task=instructions,
+                browser=Browser(headless=True),
                 llm=self.model,
                 output_model_schema=BrowserUseResult,
                 use_vision=task.policy.use_vision,
