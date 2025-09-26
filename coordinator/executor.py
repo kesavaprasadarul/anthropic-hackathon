@@ -29,7 +29,7 @@ class Executor:
         self.process_id = process_id
         self.original_prompt = original_prompt
         self.run_history = run_history
-        self.model_name = os.getenv("MODEL_NAME", "gemini/gemini-2.5-flash-lite")
+        self.model_name = os.getenv("MODEL_NAME", "anthropic/claude-3-haiku-20240307")
 
     async def _execute_step(self, step: ProcessStep, context: str) -> AgentOutput:
         prompt = f"Context from previous steps:\n{context}\n\nYour task now:\n{step.prompt_message}"

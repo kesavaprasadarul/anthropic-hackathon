@@ -2,6 +2,8 @@ import re
 import os
 import json
 import requests
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Any, Optional
 
 from ..contracts import AgentOutput
@@ -80,9 +82,15 @@ def build_agent() -> CodeAgent:
     Minimal agent: only the CombinedReservationSearchTool is available.
     The model is instructed to call exactly one tool and return its raw JSON result.
     """
+    model_kwargs = {}
+    model_kwargs["response_mime_type"] = "application/json"
+            
     model = LiteLLMModel(
-        model_id="gemini/gemini-2.5-flash-lite",
-        api_key=os.getenv("GOOGLE_API_KEY"),
+        model_id="anthropic/claude-3-haiku-20240307",
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        # model_id="gemini/gemini-2.5-flash-lite",
+        # api_key=os.getenv("GOOGLE_API_KEY"),
+        # model_kwargs=model_kwargs,
     )
 
     tools = [CombinedReservationSearchTool()]
@@ -108,10 +116,15 @@ def search_places(search_term: str, latitude: Optional[float] = None, longitude:
     else:
         lat, lon = latitude, longitude
 
+    now = datetime.now(ZoneInfo("Europe/Berlin"))
+    now_iso = now.isoformat(timespec="seconds")  # e.g., 2025-09-26T14:37:12+02:00
+
     task = f"""You ONLY help by calling the 'search_and_reservations' tool exactly once.
     Do not write explanations or code.
     Return the tool's result as a JSON string. If the tool returns an array/dict,
-    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
+    output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}.
+    Current datetime (Europe/Berlin): {now_iso}
+    """
 
     agent = build_agent()
     result = agent.run(task=task)

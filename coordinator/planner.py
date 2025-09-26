@@ -31,13 +31,16 @@ class Planner:
         self.process_id = process_id
 
         # Minimal replacement for generation config
-        self.model_name = os.getenv("PLANNER_MODEL_NAME", os.getenv("MODEL_NAME", "gemini/gemini-2.5-flash-lite"))
+        self.model_name = os.getenv("PLANNER_MODEL_NAME", os.getenv("MODEL_NAME", "anthropic/claude-3-haiku-20240307"))
+        # self.model_name = os.getenv("PLANNER_MODEL_NAME", os.getenv("MODEL_NAME", "gemini/gemini-2.5-flash"))
+
         self.gen_kwargs = {
             "temperature": 0.2,
             "top_p": 1,
             # "top_k" is provider-specific; omitted for portability
-            "max_tokens": 8192,  # maps to OpenAI-style; some providers may ignore/rename
-            "response_mime_type": "application/json",
+            # "max_tokens": 8192,  # maps to OpenAI-style; some providers may ignore/rename
+            "max_tokens": 4096, # for haiku
+            # "response_mime_type": "application/json",
         }
         # Prefer JSON output when supported (OpenAI-compatible). Safe to keep; ignored by others.
         self.response_format = {"type": "json_object"}
@@ -131,6 +134,11 @@ You are an expert AI problem-solving coordinator. A multi-step plan has failed. 
                 content = resp["choices"][0]["message"]["content"]
 
             raw_plan_data = json.loads(content)
+
+            if 'steps' in raw_plan_data:
+                raw_plan_data = raw_plan_data['steps']
+
+            print("raw:", raw_plan_data)
 
             id_map = {}
             steps_with_real_ids = []
