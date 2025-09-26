@@ -166,13 +166,9 @@ A sophisticated channel-scoped capability for the Jarvis multi-agent system that
 │   ├── test_with_real_phone_info.py        # Info agent tests
 │   └── test_postcall_handler.py            # Webhook simulation tests
 📁 docs/                     # Documentation and guides
-│   ├── PROJECT_STRUCTURE.md                # Detailed project organization
-│   ├── TEST_CALL_GUIDE.md                  # Testing instructions
-│   ├── TEST_SCENARIOS_GUIDE.md             # Reservation scenarios
 │   ├── CANCEL_AGENT_TEST_GUIDE.md          # Cancel agent guide
 │   ├── INFO_AGENT_TEST_GUIDE.md            # Info agent guide
-│   ├── DYNAMIC_PHONE_ASSIGNMENT.md         # Phone assignment docs
-│   └── POSTCALL_HANDLER_EXPLANATION.md     # Webhook processing guide
+│   └── DYNAMIC_PHONE_ASSIGNMENT.md         # Phone assignment docs
 📄 main.py                   # FastAPI application entry point
 📄 requirements.txt          # Python dependencies
 📄 env.example               # Environment variables template
@@ -567,15 +563,13 @@ To add new status types:
 - **📈 Scalable**: Designed for high-volume production use
 - **🔧 Maintainable**: Comprehensive documentation and modular code structure
 
-## 📚 Documentation
+## 📚 Additional Documentation
 
-- [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) - Detailed project organization
-- [`docs/TEST_CALL_GUIDE.md`](docs/TEST_CALL_GUIDE.md) - Testing instructions
-- [`docs/TEST_SCENARIOS_GUIDE.md`](docs/TEST_SCENARIOS_GUIDE.md) - Reservation scenarios
-- [`docs/CANCEL_AGENT_TEST_GUIDE.md`](docs/CANCEL_AGENT_TEST_GUIDE.md) - Cancel agent guide
-- [`docs/INFO_AGENT_TEST_GUIDE.md`](docs/INFO_AGENT_TEST_GUIDE.md) - Info agent guide
-- [`docs/DYNAMIC_PHONE_ASSIGNMENT.md`](docs/DYNAMIC_PHONE_ASSIGNMENT.md) - Phone assignment docs
-- [`docs/POSTCALL_HANDLER_EXPLANATION.md`](docs/POSTCALL_HANDLER_EXPLANATION.md) - Webhook processing guide
+For detailed implementation and testing guides:
+
+- [`docs/CANCEL_AGENT_TEST_GUIDE.md`](docs/CANCEL_AGENT_TEST_GUIDE.md) - Cancel agent testing scenarios and role-playing
+- [`docs/INFO_AGENT_TEST_GUIDE.md`](docs/INFO_AGENT_TEST_GUIDE.md) - Info agent testing scenarios and role-playing  
+- [`docs/DYNAMIC_PHONE_ASSIGNMENT.md`](docs/DYNAMIC_PHONE_ASSIGNMENT.md) - Technical details of phone assignment logic
 
 ## 🤝 Contributing
 
