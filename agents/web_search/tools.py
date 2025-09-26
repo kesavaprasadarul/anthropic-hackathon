@@ -153,7 +153,7 @@ class CombinedReservationSearchTool(Tool):
     def _places_search(self, text_query: str, latitude: Optional[float], longitude: Optional[float], radius: Optional[int]) -> List[Dict[str, Any]]:
         payload: Dict[str, Any] = {
             "textQuery": text_query,
-            "maxResultCount": 1,
+            "maxResultCount": 5,
             "rankPreference": "RELEVANCE",
         }
         if latitude is not None and longitude is not None:
