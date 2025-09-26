@@ -1,18 +1,15 @@
 """
-Result processing and normalization for browser automation.
-
-This module handles the processing of raw browser automation results into
-standardized BrowserAutomationResult objects with proper status mapping
-and artifact extraction.
+Result processor for browser automation tasks.
 """
 
-import json
+from typing import Dict, Any, Optional, Union, List
 import re
-from typing import Any, Dict, Optional, Union
+import json
+import logging
 from datetime import datetime, date, time
 
 from contracts import (
-    BrowserTask, BrowserAutomationResult, BookingDetails, InfoResponse,
+    BrowserTask, BrowserAutomationResult, BookingDetails, InfoResponse, RecommendResponse,
     Evidence, Status, NextAction, Intent, InfoType
 )
 from observability import get_logger
@@ -40,6 +37,8 @@ class ResultProcessor:
                 return self._process_reservation_result(raw_result, task, evidence)
             elif task.intent == Intent.INFO:
                 return self._process_info_result(raw_result, task, evidence)
+            elif task.intent == Intent.RECOMMEND:
+                return self._process_recommend_result(raw_result, task, evidence)
             else:
                 return self._create_error_result(
                     f"Unsupported intent: {task.intent}",
@@ -92,20 +91,19 @@ class ResultProcessor:
         # Extract booking details
         booking_details = self._extract_booking_details(result, task)
         
-        # Determine next action
-        next_action = NextAction.ADD_TO_CALENDAR
-        
-        # Create success message
-        message = "Successfully completed reservation"
+        # Create model rationale from the result
+        model_rationale = result.get("confirmation_details", "Successfully completed reservation")
         if booking_details.booking_reference:
-            message += f". Booking reference: {booking_details.booking_reference}"
+            model_rationale += f". Booking reference: {booking_details.booking_reference}"
         
         return BrowserAutomationResult(
             status=Status.COMPLETED,
-            message=message,
-            next_action=next_action,
-            core_artifact=booking_details,
-            evidence=evidence
+            artifact=booking_details,
+            model_rationale=model_rationale,
+            evidence=evidence,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=NextAction.ADD_TO_CALENDAR
         )
     
     def _create_failed_reservation_result(
@@ -131,7 +129,7 @@ class ResultProcessor:
         
         status, next_action = status_mapping.get(error_type, (Status.ERROR, NextAction.SWITCH_CHANNEL))
         
-        # Create appropriate message
+        # Create appropriate model rationale
         message_mapping = {
             Status.NO_WEBSITE: "Could not access restaurant website or no online reservations available",
             Status.RESTAURANT_CLOSED: "Restaurant is closed during the requested time",
@@ -141,14 +139,17 @@ class ResultProcessor:
             Status.ERROR: "An error occurred during the reservation process"
         }
         
-        message = message_mapping.get(status, error_details)
+        model_rationale = message_mapping.get(status, error_details)
         
         return BrowserAutomationResult(
             status=status,
-            message=message,
-            next_action=next_action,
+            artifact=None,  # No booking details for failed reservation
+            model_rationale=model_rationale,
             evidence=evidence,
-            error_reason=error_details
+            error_reason=error_details,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=next_action
         )
     
     def _extract_booking_details(self, result: Dict[str, Any], task: BrowserTask) -> BookingDetails:
@@ -265,14 +266,16 @@ class ResultProcessor:
             source_url=task.business.website
         )
         
-        message = f"Successfully retrieved {payload.info_type.value} information"
+        model_rationale = f"Successfully retrieved {payload.info_type.value} information: {info_data}"
         
         return BrowserAutomationResult(
             status=Status.COMPLETED,
-            message=message,
-            next_action=NextAction.NONE,
-            core_artifact=info_response,
-            evidence=evidence
+            artifact=info_response,
+            model_rationale=model_rationale,
+            evidence=evidence,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=NextAction.NONE
         )
     
     def _create_failed_info_result(
@@ -289,20 +292,145 @@ class ResultProcessor:
         limitations = result.get("limitations", "")
         error_reason = limitations or "Requested information not found on website"
         
-        message = f"Could not find {payload.info_type.value} information"
+        model_rationale = f"Could not find {payload.info_type.value} information. {error_reason}"
         
         return BrowserAutomationResult(
             status=Status.NO_WEBSITE,  # Information not available on website
-            message=message,
-            next_action=NextAction.SWITCH_CHANNEL,
+            artifact=None,
+            model_rationale=model_rationale,
             evidence=evidence,
-            error_reason=error_reason
+            error_reason=error_reason,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=NextAction.SWITCH_CHANNEL
+        )
+    
+    def _process_recommend_result(
+        self, 
+        raw_result: Any, 
+        task: BrowserTask, 
+        evidence: Evidence
+    ) -> BrowserAutomationResult:
+        """Process restaurant recommendation results."""
+        
+        parsed_result = self._parse_raw_result(raw_result)
+        
+        if not parsed_result:
+            return self._create_error_result(
+                "No result returned from browser automation",
+                evidence,
+                Status.ERROR
+            )
+        
+        # Check if recommendations were found
+        recommendations_found = parsed_result.get("recommendations_found", False)
+        
+        if recommendations_found:
+            return self._create_successful_recommend_result(parsed_result, task, evidence)
+        else:
+            return self._create_failed_recommend_result(parsed_result, task, evidence)
+    
+    def _create_successful_recommend_result(
+        self, 
+        result: Dict[str, Any], 
+        task: BrowserTask, 
+        evidence: Evidence
+    ) -> BrowserAutomationResult:
+        """Create successful recommendation result."""
+        
+        payload = task.payload  # RecommendPayload
+        
+        # Extract recommendation data
+        recommendations = result.get("recommendations", [])
+        search_area = result.get("search_area", payload.area)
+        budget_range = result.get("budget_range", f"{payload.budget}€")
+        limitations = result.get("limitations", "")
+        
+        recommend_response = RecommendResponse(
+            recommendations_found=True,
+            recommendations=recommendations,
+            search_area=search_area,
+            budget_range=budget_range,
+            additional_notes=limitations if limitations else None
+        )
+        
+        # Create model rationale with summary of recommendations
+        restaurant_names = [rec.get("name", "Unknown") for rec in recommendations[:2]]
+        model_rationale = f"Found {len(recommendations)} restaurant recommendations in {search_area} within {budget_range} budget"
+        if restaurant_names:
+            model_rationale += f": {', '.join(restaurant_names)}"
+            if len(recommendations) > 2:
+                model_rationale += f" and {len(recommendations) - 2} more"
+        
+        return BrowserAutomationResult(
+            status=Status.COMPLETED,
+            artifact=recommend_response,
+            model_rationale=model_rationale,
+            evidence=evidence,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=NextAction.NONE
+        )
+    
+    def _create_failed_recommend_result(
+        self, 
+        result: Dict[str, Any], 
+        task: BrowserTask, 
+        evidence: Evidence
+    ) -> BrowserAutomationResult:
+        """Create failed recommendation result."""
+        
+        payload = task.payload  # RecommendPayload
+        
+        # Determine why recommendations weren't found
+        limitations = result.get("limitations", "")
+        error_reason = limitations or f"Could not find suitable restaurant recommendations in {payload.area}"
+        
+        model_rationale = f"No restaurant recommendations found in {payload.area} within {payload.budget}€ budget. {error_reason}"
+        
+        return BrowserAutomationResult(
+            status=Status.NO_AVAILABILITY,  # No suitable options found
+            artifact=None,
+            model_rationale=model_rationale,
+            evidence=evidence,
+            error_reason=error_reason,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=NextAction.REQUEST_USER_INPUT
         )
     
     def _parse_raw_result(self, raw_result: Any) -> Optional[Dict[str, Any]]:
-        """Parse raw result into dictionary format."""
+        """Parse raw result (browser-use history) into dictionary format."""
         if not raw_result:
             return None
+        
+        # Check if this is a browser-use history object with the expected methods
+        if hasattr(raw_result, 'is_successful') and hasattr(raw_result, 'final_result'):
+            try:
+                # Extract information from browser-use history API
+                is_successful = raw_result.is_successful() if callable(getattr(raw_result, 'is_successful')) else raw_result.is_successful
+                final_content = raw_result.final_result() if callable(getattr(raw_result, 'final_result')) else raw_result.final_result
+                
+                # Try to parse the final result as JSON if it's a string
+                if isinstance(final_content, str):
+                    try:
+                        parsed_content = json.loads(final_content)
+                        if isinstance(parsed_content, dict):
+                            parsed_content['success'] = is_successful
+                            return parsed_content
+                    except json.JSONDecodeError:
+                        pass
+                
+                # Fallback: create a simple result structure
+                return {
+                    'success': is_successful,
+                    'data': final_content,
+                    'model_output': str(final_content)
+                }
+                
+            except Exception as e:
+                logger.warning(f"Error parsing browser-use history: {str(e)}")
+                return {'success': False, 'error_details': str(e)}
         
         # If it's already a dict, return it
         if isinstance(raw_result, dict):
@@ -343,11 +471,15 @@ class ResultProcessor:
         }
         
         next_action = next_action_mapping.get(status, NextAction.NONE)
+        model_rationale = f"Browser automation failed: {error_message}"
         
         return BrowserAutomationResult(
             status=status,
-            message=f"Browser automation failed: {error_message}",
-            next_action=next_action,
+            artifact=None,
+            model_rationale=model_rationale,
             evidence=evidence,
-            error_reason=error_message
+            error_reason=error_message,
+            # Legacy fields for backward compatibility
+            message=model_rationale,
+            next_action=next_action
         )

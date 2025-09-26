@@ -8,7 +8,7 @@ the browser automation system for reservations and information requests.
 from datetime import date, time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, List, Union, Any, Protocol
+from typing import Optional, List, Union, Any, Protocol, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -153,13 +153,14 @@ class InfoResponse(BaseModel):
     source_url: Optional[str] = None
 
 class RecommendResponse(BaseModel):
-    """Structured information response."""
+    """Structured restaurant recommendation response."""
     model_config = ConfigDict(json_encoders={date: lambda v: v.isoformat(), time: lambda v: v.isoformat()})
     
-    info_type: InfoType
-    data: Any  # The actual information content
+    recommendations_found: bool
+    recommendations: List[Dict[str, Any]] = Field(default_factory=list)  # List of restaurant recommendations
+    search_area: Optional[str] = None
+    budget_range: Optional[str] = None
     additional_notes: Optional[str] = None
-    source_url: Optional[str] = None
 
 
 # Evidence and Observability
@@ -172,17 +173,25 @@ class Evidence(BaseModel):
     steps_taken: int = 0
     duration_seconds: Optional[float] = None
 
+class BrowserUseResult(BaseModel):
+    status: str
+    booking_details: str
+    final_result: str
+
 
 # Final Result Model
 class BrowserAutomationResult(BaseModel):
-    """Standardized result from browser automation."""
+    """Standardized result from browser automation following the new specification."""
     model_config = ConfigDict(json_encoders={date: lambda v: v.isoformat(), time: lambda v: v.isoformat()})
     
     status: Status
-    message: str
+    artifact: Optional[Union[BookingDetails, InfoResponse, RecommendResponse]] = None  # Renamed from core_artifact
+    model_rationale: str  # String of the model's final output for downstream tasks
+    evidence: Evidence  # Keep evidence for internal tracking
+    
+    # Legacy fields for backward compatibility (can be removed later)
+    message: Optional[str] = None  # Deprecated in favor of model_rationale
     next_action: NextAction = NextAction.NONE
-    core_artifact: Optional[Union[BookingDetails, InfoResponse]] = None
-    evidence: Evidence
     error_reason: Optional[str] = None
     missing_fields: Optional[List[str]] = None
 

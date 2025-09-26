@@ -92,13 +92,14 @@ Make a restaurant reservation at {business.name} ({business.website})
 **Critical Instructions:**
 - Navigate to {business.website} and verify it's the correct restaurant. Ensure that {business.name} and {business.website} match.
 - Confirm that this is a restaurant and not another service
-- Check if restaurant is open on {payload.date} during {payload.time_window_start}-{payload.time_window_end}
+- Check if restaurant is open on {payload.date} during {payload.time_window_start}-{payload.time_window_end}. If not return status "restaurant_closed"
 - Look for online reservation system (booking form, OpenTable, Resy, etc.)
-- If the website explicitly states that no reservations are possible or only via phone, abort the process and format the output
+- If the website explicitly states that no reservations are possible or only via phone, abort the process and return status "no_bookings"
 - Fill out reservation form with provided details. Use the same language for filling out the form as the companies website
-- If the website does not provide a reservation system, search up the restaurant on OpenTable and setup the reservation there. Do not use a website other than OpenTable. If you cannot find the restaurant on OpenTable, abort the process.
+- If the website does not provide a reservation system, search up the restaurant on OpenTable and setup the reservation there. Do not use a website other than OpenTable. If you cannot find the restaurant on OpenTable, abort the process and return status "no_bookings".
 - Take screenshots at key steps for evidence
 - If any step fails, provide specific error details
+- Return the reservation details as booking_details
 
 **Reservation Details:**
 - Name: {user.name}

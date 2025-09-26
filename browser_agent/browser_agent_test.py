@@ -119,14 +119,14 @@ async def test_reservation2():
 async def test_reservation3():
     """Test reservation that should succeed"""
     result = await browser_agent.make_reservation(
-        business_name="Augustiner Klosterwirt",
-        business_website="https://augustiner-klosterwirt.de/index.php/",
+        business_name="Augustiner Haidhausen",
+        business_website="",
         customer_name="Maria Musterfrau",
         customer_email="h@g.com",
         reservation_date="2025-09-27",
         start_time="19:00",
         end_time="20:00",
-        party_size=29,
+        party_size=3,
         phone_number="+48123123123",
         duration_minutes=120,
         notes="",
@@ -226,7 +226,7 @@ async def test_recommend2():
 
 async def main():
     """Run all tests to demonstrate the new modular API"""
-    await test_reservation6()
+    await test_reservation3()
 
 if __name__ == "__main__":
     asyncio.run(main())

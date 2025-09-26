@@ -58,18 +58,7 @@ class BrowserAutomationRouter:
                 # Step 2: Execute browser automation
                 final_result = await self.executor.execute(task)
                 
-                # Handle different result types
-                if not isinstance(final_result, BrowserAutomationResult):
-                    logger.error(f"Unexpected result type from executor: {type(final_result)}")
-                    return BrowserAutomationResult(
-                        status=Status.ERROR,
-                        message="Invalid result format from browser executor",
-                        next_action=NextAction.RETRY_LATER,
-                        evidence=self._create_empty_evidence(),
-                        error_reason="Invalid executor response"
-                    )
-                
-            logger.info(f"Completed browser automation for task {task_id}: {final_result.status}")
+            logger.info(f"Completed browser automation for task {task_id}: {final_result}")
             return final_result
                 
         except InputValidationError as e:

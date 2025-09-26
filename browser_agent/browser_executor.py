@@ -1,21 +1,16 @@
-"""
-Browser automation execution engine.
-
-This module handles the actual execution of browser automation tasks using
-the browser-use agent framework.
-"""
-
 import asyncio
 import logging
 import time
 from typing import Any, Optional, Dict, List
 from datetime import datetime
+import json
 
 from browser_use import Agent, ChatGoogle
 from dotenv import load_dotenv
 
-from contracts import BrowserTask, BrowserAutomationResult, Evidence, Status, NextAction
+from contracts import BrowserTask, BrowserAutomationResult, Evidence, Status, NextAction, BrowserUseResult
 from payload_builder import PayloadBuilder
+from result_processor import ResultProcessor
 from observability import get_logger, log_execution_metrics
 
 load_dotenv()
@@ -40,9 +35,10 @@ class BrowserExecutor:
         """
         self.model = ChatGoogle(model=model_name)
         self.payload_builder = PayloadBuilder()
+        self.result_processor = ResultProcessor()
         logger.info(f"Initialized BrowserExecutor with model: {model_name}")
     
-    async def execute(self, task: BrowserTask) -> BrowserAutomationResult:
+    async def execute(self, task: BrowserTask) -> str:
         """
         Execute a browser automation task.
         
@@ -68,6 +64,7 @@ class BrowserExecutor:
             agent = Agent(
                 task=instructions,
                 llm=self.model,
+                output_model_schema=BrowserUseResult,
                 use_vision=task.policy.use_vision,
                 max_failures=task.policy.max_failures,
                 generate_gif=False,  # Disable GIF generation for performance
@@ -75,29 +72,11 @@ class BrowserExecutor:
             
             # Execute the automation
             history = await self._execute_with_monitoring(agent, task, task_id)
-            
-            # Extract execution evidence
-            evidence = self._extract_evidence(history, start_time)
-            
-            # Process results based on history
-            final_result = self._create_result_from_history(history, task, evidence)
-            
-            logger.info(f"Browser automation completed for {task_id}, steps: {evidence.steps_taken}")
-            
-            # Log execution metrics
-            execution_time = time.time() - start_time
-            success = final_result.status == Status.COMPLETED
-            log_execution_metrics(
-                task_id=task_id,
-                business_name=task.business.name,
-                intent=task.intent.value,
-                execution_time=execution_time,
-                steps_taken=evidence.steps_taken,
-                success=success
-            )
-            
+
+            final_result = history.final_result()
+            parsed: BrowserUseResult = BrowserUseResult.model_validate_json(final_result)
             # Return the final result directly
-            return final_result
+            return parsed.model_dump_json()
             
         except Exception as e:
             execution_time = time.time() - start_time
