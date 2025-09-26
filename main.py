@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from coordinator.planner import Planner
 from coordinator.executor import Executor
 from database.models import ProcessRun
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(
     title="Butler AI Coordinator",

@@ -9,9 +9,7 @@ from pydantic import ValidationError
 from litellm import acompletion  # <-- replace genai with LiteLLM
 
 from database.models import ProcessStep
-from dotenv import load_dotenv
 
-load_dotenv()
 # genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))  # <-- removed
 
 tool_string = """

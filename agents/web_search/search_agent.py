@@ -86,8 +86,8 @@ def build_agent() -> CodeAgent:
     model_kwargs["response_mime_type"] = "application/json"
             
     model = LiteLLMModel(
-        model_id="anthropic/claude-3-haiku-20240307",
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model_id=os.getenv("MODEL_NAME", "anthropic/claude-3-haiku-20240307"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
         # model_id="gemini/gemini-2.5-flash-lite",
         # api_key=os.getenv("GOOGLE_API_KEY"),
         # model_kwargs=model_kwargs,
