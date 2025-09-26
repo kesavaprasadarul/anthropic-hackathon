@@ -1,12 +1,71 @@
+import re
 import os
 import json
 import requests
 from typing import List, Dict, Any, Optional
 
+from ..contracts import AgentOutput
 from .globals import *
 from smolagents import Tool, CodeAgent
 from smolagents.models import LiteLLMModel
 from .tools import CombinedReservationSearchTool
+
+
+
+_FENCE_RE = re.compile(r'^```(?:json)?\s*\r?\n(.*)\r?\n```$', re.IGNORECASE | re.DOTALL)
+
+def _strip_fences(s: str) -> str:
+    m = _FENCE_RE.match(s.strip())
+    return m.group(1).strip() if m else s.strip()
+
+def _to_agent_output(obj: Any) -> AgentOutput:
+    """Best-effort coercion to AgentOutput."""
+    # Already an AgentOutput
+    if isinstance(obj, AgentOutput):
+        return obj
+
+    # Bytes → str
+    if isinstance(obj, (bytes, bytearray)):
+        obj = obj.decode("utf-8", "replace")
+
+    # String → try JSON → else wrap as completed/result
+    if isinstance(obj, str):
+        s = _strip_fences(obj)
+        try:
+            obj = json.loads(s)
+        except Exception:
+            return AgentOutput(status="completed", result=s, error=None)
+
+    # Pydantic/BaseModel-ish
+    if hasattr(obj, "model_dump"):
+        obj = obj.model_dump()
+
+    # Dict → try strict validate; if not present, infer
+    if isinstance(obj, dict):
+        # Perfect match
+        if {"status", "result", "error"} <= obj.keys():
+            try:
+                return AgentOutput.model_validate(obj)
+            except ValidationError:
+                pass
+        # Infer minimal AgentOutput
+        status = obj.get("status")
+        if status not in ("completed", "failed"):
+            status = "failed" if "error" in obj else "completed"
+        result = obj.get("result")
+        error = obj.get("error")
+        if status == "completed" and result is None:
+            # Use the dict itself as a summary if no result given
+            result = json.dumps(obj, ensure_ascii=False)
+        if status == "failed" and error is None:
+            error = json.dumps(obj, ensure_ascii=False)
+        return AgentOutput(status=status, result=result if status=="completed" else None, error=error if status=="failed" else None)
+
+    # List/other → stringify as a completed result
+    try:
+        return AgentOutput(status="completed", result=json.dumps(obj, ensure_ascii=False), error=None)
+    except Exception:
+        return AgentOutput(status="completed", result=str(obj), error=None)
 
 
 PLACES_FIELDS = (
@@ -118,12 +177,11 @@ class PlaceSearchAgent:
     output exactly that JSON and nothing else. Find {search_term} near location {lat}, {lon}."""
 
         agent = self._get_agent()  # <-- This is where _get_agent() actually runs!
-        result = agent.run(task=task)
-
-        if isinstance(result, (dict, list)):
-            return result
-        else:
-            return {"error": "Invalid result format", "raw_result": str(result)}
+        try:
+            raw = agent.run(task=task)
+        except Exception as e:
+            return AgentOutput(status="failed", result=None, error=f"Agent error: {e}")
+        return _to_agent_output(raw)
 
 
 # def main() -> None:

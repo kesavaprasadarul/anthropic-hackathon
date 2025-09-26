@@ -37,6 +37,7 @@ class Planner:
             "top_p": 1,
             # "top_k" is provider-specific; omitted for portability
             "max_tokens": 8192,  # maps to OpenAI-style; some providers may ignore/rename
+            "response_mime_type": "application/json",
         }
         # Prefer JSON output when supported (OpenAI-compatible). Safe to keep; ignored by others.
         self.response_format = {"type": "json_object"}
