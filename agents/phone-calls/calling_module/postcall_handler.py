@@ -67,13 +67,18 @@ class PostCallHandler:
             # Handle ElevenLabs webhook format
             if "type" in webhook_payload and webhook_payload["type"] == "post_call_transcription":
                 # ElevenLabs format: extract data from nested structure
-                data = webhook_payload.get("data", {})
-                call_id = data.get("conversation_id")
-                status_text = data.get("status", "").lower()
+                envelope = webhook_payload
+                data = envelope.get("data", {}) or {}
+                call_id = data.get("conversation_id") or data.get("call_id")
+                status_text = str(data.get("status", ""))
                 
                 # Extract transcript summary from analysis
-                analysis = data.get("analysis", {})
-                summary = analysis.get("transcript_summary", "")
+                analysis = data.get("analysis", {}) or {}
+                summary = (
+                    analysis.get("transcript_summary")
+                    if isinstance(analysis, dict)
+                    else ""
+                ) or str(data.get("summary", ""))
                 
                 # Debug logging for analysis and summary
                 self.logger._log_event(
@@ -90,7 +95,7 @@ class PostCallHandler:
                 )
                 
                 # Extract full transcript text
-                transcript_turns = data.get("transcript", [])
+                transcript_turns = data.get("transcript", []) or []
                 
                 # Debug logging for transcript structure
                 self.logger._log_event(
@@ -147,7 +152,7 @@ class PostCallHandler:
                             "transcript_turns": [
                                 {
                                     "role": turn.get("role", "unknown") if isinstance(turn, dict) else "not_dict",
-                                    "text": turn.get("text", "") if isinstance(turn, dict) else str(turn),
+                                    "text": (turn.get("text") or turn.get("message", "")) if isinstance(turn, dict) else str(turn),
                                     "timestamp": turn.get("timestamp", "") if isinstance(turn, dict) else ""
                                 } for turn in transcript_turns[:10]  # Limit to first 10 turns for logging
                             ]
@@ -155,12 +160,31 @@ class PostCallHandler:
                         correlation_id=call_id
                     )
                 
-                # Store the full data for artifact extraction
-                full_data = data
+                # Build enriched payload for downstream processing
+                metadata = data.get("metadata", {}) or {}
+                enriched_data = dict(data)
+                enriched_data["summary"] = summary or ""
+                enriched_data["transcript"] = transcript or ""
+                enriched_data["raw_transcript_turns"] = transcript_turns
+                enriched_data["analysis"] = analysis
+                enriched_data["metadata"] = metadata
+                enriched_data["event_timestamp"] = envelope.get("event_timestamp")
+                enriched_data["type"] = envelope.get("type")
+                if call_id and "call_id" not in enriched_data:
+                    enriched_data["call_id"] = call_id
+                if metadata:
+                    if "call_duration_secs" in metadata and "duration_seconds" not in enriched_data:
+                        enriched_data["duration_seconds"] = metadata.get("call_duration_secs")
+                    if "cost" in metadata and "cost" not in enriched_data:
+                        enriched_data["cost"] = metadata.get("cost")
+                enriched_data["raw_envelope"] = envelope
+                
+                full_data = enriched_data
+                status_text = status_text.lower()
             else:
                 # Legacy format or direct data
                 call_id = webhook_payload.get("call_id")
-                status_text = webhook_payload.get("status", "").lower()
+                status_text = str(webhook_payload.get("status", "")).lower()
                 summary = webhook_payload.get("summary", "")
                 transcript = webhook_payload.get("transcript", "")
                 full_data = webhook_payload
@@ -400,12 +424,21 @@ class PostCallHandler:
     
     def _build_evidence(self, webhook_payload: Dict[str, Any]) -> CallEvidence:
         """Build evidence object from webhook data."""
+        metadata = webhook_payload.get("metadata") if isinstance(webhook_payload, dict) else None
+        call_duration = webhook_payload.get("duration_seconds") if isinstance(webhook_payload, dict) else None
+        if call_duration is None and isinstance(metadata, dict):
+            call_duration = metadata.get("call_duration_secs")
+        raw_envelope = (
+            webhook_payload.get("raw_envelope")
+            if isinstance(webhook_payload, dict)
+            else None
+        )
         return CallEvidence(
             provider_call_id=webhook_payload.get("conversation_id") or webhook_payload.get("call_id"),
             transcript_url=webhook_payload.get("transcript_url"),
             recording_url=webhook_payload.get("recording_url"),
-            call_duration_seconds=webhook_payload.get("duration_seconds"),
-            webhook_payload=webhook_payload
+            call_duration_seconds=call_duration,
+            webhook_payload=raw_envelope or webhook_payload
         )
     
     def _generate_message(self, status: CallStatus, artifact: Optional[CallArtifact], 
@@ -449,8 +482,12 @@ class PostCallHandler:
         transcript_parts = []
         for turn in transcript_turns:
             if isinstance(turn, dict):
-                speaker = turn.get("speaker", "")
-                text = turn.get("text", "")
+                speaker = (
+                    turn.get("speaker")
+                    or turn.get("role")
+                    or "unknown"
+                )
+                text = turn.get("text") or turn.get("message", "")
                 if text:
                     transcript_parts.append(f"{speaker}: {text}")
             elif isinstance(turn, str):

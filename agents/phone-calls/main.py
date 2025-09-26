@@ -142,6 +142,16 @@ async def postcall_webhook(request: Request):
         raw_body = await request.body()
         request_data = await request.json()
         
+        # Prepare correlation ID for observability logs
+        payload_for_correlation = request_data.get("data", request_data)
+        correlation_id = (
+            (payload_for_correlation.get("call_id") if isinstance(payload_for_correlation, dict) else None)
+            or (payload_for_correlation.get("conversation_id") if isinstance(payload_for_correlation, dict) else None)
+            or request_data.get("call_id")
+            or request_data.get("conversation_id")
+            or "unknown"
+        )
+
         # Verify webhook signature if secret is configured
         config = get_config()
         webhook_secret = getattr(config.elevenlabs, 'webhook_secret', None)
@@ -157,7 +167,7 @@ async def postcall_webhook(request: Request):
                 "elevenlabs_signature_header": request.headers.get('ElevenLabs-Signature', 'missing'),
                 "body_length": len(raw_body)
             },
-            correlation_id=request_data.get("call_id", "unknown")
+                correlation_id=correlation_id
         )
         
         if webhook_secret:
@@ -175,7 +185,7 @@ async def postcall_webhook(request: Request):
                             "webhook_secret_length": len(webhook_secret),
                             "body_length": len(raw_body)
                         },
-                        correlation_id=request_data.get("call_id", "unknown")
+                        correlation_id=correlation_id
                     )
                     raise HTTPException(status_code=401, detail="Invalid webhook signature")
             else:
@@ -186,7 +196,7 @@ async def postcall_webhook(request: Request):
                         event_type="webhook_signature_bypass",
                         message="Bypassing signature verification in development mode",
                         metadata={"reason": "No signature header found"},
-                        correlation_id=request_data.get("call_id", "unknown")
+                        correlation_id=correlation_id
                     )
                 logger._log_event(
                     level="WARNING",
@@ -197,13 +207,13 @@ async def postcall_webhook(request: Request):
                         "webhook_secret_length": len(webhook_secret),
                         "body_length": len(raw_body)
                     },
-                    correlation_id=request_data.get("call_id", "unknown")
+                    correlation_id=correlation_id
                 )
                 raise HTTPException(status_code=401, detail="Invalid webhook signature")
         
         # Handle ElevenLabs webhook payload structure
         # ElevenLabs sends: {"type": "...", "event_timestamp": "...", "data": {...}}
-        # We need to extract the actual call data from the "data" field
+        # We keep the full envelope for downstream processing but also capture the inner payload for logging
         actual_payload = request_data.get("data", request_data)
         
         # Debug logging for payload structure
@@ -214,12 +224,13 @@ async def postcall_webhook(request: Request):
             metadata={
                 "has_data_field": "data" in request_data,
                 "actual_payload_keys": list(actual_payload.keys()) if isinstance(actual_payload, dict) else "not_dict",
-                "call_id_in_actual": actual_payload.get("call_id") if isinstance(actual_payload, dict) else None
+                "call_id_in_actual": actual_payload.get("call_id") if isinstance(actual_payload, dict) else None,
+                "conversation_id_in_actual": actual_payload.get("conversation_id") if isinstance(actual_payload, dict) else None
             },
-            correlation_id=actual_payload.get("call_id", "unknown")
+            correlation_id=correlation_id
         )
         
-        result = on_postcall(actual_payload)
+        result = on_postcall(request_data)
         
         # Convert result to dict for JSON response
         result_dict = {
