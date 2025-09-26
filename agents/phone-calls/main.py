@@ -271,6 +271,15 @@ async def postcall_webhook(request: Request):
                 "call_duration_seconds": result.evidence.call_duration_seconds
                 # Exclude transcript/recording URLs and webhook payload for security
             }
+            
+        logger._log_event(
+            level="INFO",
+            event_type="postcall_webhook_processed_full_data",
+            message="Post-call webhook processed successfully",
+            #dump entire result_dict but exclude sensitive fields
+            metadata={k: (v if k not in ["evidence", "core_artifact", "observations"] else "redacted") for k, v in result_dict.items()},
+            correlation_id=correlation_id
+        )
         
         return result_dict
         
