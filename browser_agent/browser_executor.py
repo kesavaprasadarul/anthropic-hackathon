@@ -63,7 +63,7 @@ class BrowserExecutor:
             # Create browser agent
             agent = Agent(
                 task=instructions,
-                browser=Browser(headless=True),
+                browser=Browser(headless=False),
                 llm=self.model,
                 output_model_schema=BrowserUseResult,
                 use_vision=task.policy.use_vision,
@@ -118,12 +118,10 @@ class BrowserExecutor:
             history = await asyncio.wait_for(
                 agent.run(max_steps=task.policy.max_steps),
                 timeout=timeout_seconds
-            )
-            
+            )            
             # Log detailed execution steps
             if hasattr(history, 'history') and history.history:
                 self._log_execution_steps(history.history, task_id)
-            
             return history
             
         except asyncio.TimeoutError:

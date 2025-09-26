@@ -99,15 +99,15 @@ async def test_reservation1():
 async def test_reservation2():
     """Test reservation that should fail - too many people (>6)"""
     result = await browser_agent.make_reservation(
-        business_name="Haidhauser Augustiner München",
-        business_website="",
-        customer_name="Heinrich Schmidt",
-        customer_email="h@g.com",
-        reservation_date="2025-09-27",
+        business_name="Hannes",
+        business_website="https://max-pett.de/",
+        customer_name="Hannes",
+        customer_email="hannes@g.com",
+        reservation_date="2025-09-28",
         start_time="17:00",
         end_time="18:00",
-        party_size=9,
-        phone_number="+48123123123",
+        party_size=7,
+        phone_number="0123123123",
         duration_minutes=120,
         notes="",
         preferences="",
@@ -226,7 +226,7 @@ async def test_recommend2():
 
 async def main():
     """Run all tests to demonstrate the new modular API"""
-    await test_reservation3()
+    await test_reservation2()
 
 if __name__ == "__main__":
     asyncio.run(main())
