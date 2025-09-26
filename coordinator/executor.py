@@ -103,7 +103,7 @@ class Executor:
         if tool_name in AVAILABLE_TOOLS:
             tool_function = AVAILABLE_TOOLS[tool_name]
             # For mocks, still just pass the prompt. Real tools can use tool_args fully.
-            tool_result = await tool_function(tool_args.get("prompt", step.prompt_message))
+            tool_result = tool_function(tool_args.get("prompt", step.prompt_message))
         else:
             print(f"[{self.process_id}] Error: Model tried to call unknown tool '{tool_name}'")
             tool_result = AgentOutput(status="failed", error=f"Unknown tool: {tool_name}")

@@ -147,12 +147,20 @@ class BookingAgent:
                 NoOpTool(),
                 GoogleCalendarCreateEventTool(self._token),
             ]
-            self._agent = CodeAgent(tools=tools, model=model)
+            self._agent = CodeAgent(tools=tools, model=model, additional_authorized_imports=['json'])
         return self._agent
     
-    def create_appointment(self, start_iso: str, end_iso: str, summary: str, timezone: str,
-                          location: str = "TBD", description: str = "Auto-created by agent", 
-                          calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
+    def create_appointment(
+        self,
+        start_iso: str = "2025-09-27T11:00:00+02:00",
+        end_iso: str   = "2025-09-27T12:00:00+02:00",
+        summary: str   = "Appointment",
+        timezone: str  = "Europe/Berlin",
+        location: str = "TBD",
+        description: str = "Auto-created by agent",
+        calendar_id: str = "primary",
+        attendees: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """
         Create an appointment in the user's calendar.
         

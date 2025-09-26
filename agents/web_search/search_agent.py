@@ -87,7 +87,7 @@ def build_agent() -> CodeAgent:
 
     tools = [CombinedReservationSearchTool()]
 
-    return CodeAgent(tools=tools, model=model)
+    return CodeAgent(tools=tools, model=model, additional_authorized_imports=['json'])
 
 def search_places(search_term: str, latitude: Optional[float] = None, longitude: Optional[float] = None) -> Dict[str, Any]:
     """
