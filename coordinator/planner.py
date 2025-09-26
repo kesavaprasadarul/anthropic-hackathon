@@ -15,7 +15,7 @@ from database.models import ProcessStep
 tool_string = """
 **Available Tools:**
 - "mock_search_agent": Use this to find and compare options (e.g., highest-rated businesses) and to acquire all necessary contact details at once, such as a website URL, physical address, and phone number. This module cannot make actions, but only read.
-- "mock_browser_agent": Use this for a specific action on a known website, like filling out a confirmed online booking form. Do not use this tool to browse or search multiple sites.
+- "mock_browser_agent": Use this for a specific action on a known website (reservations, info lookups, recommendations). Supply a JSON `task_payload` with `business`, `user` contact (email or phone), `intent`, and the matching intent block (e.g., `reservation` with date/time_window/party_size).
 - "mock_calendar_agent": Creates events in the user's Google Calendar. Can be used for confirmations or to schedule a manual follow-up task for the user as a last resort.
 - "mock_calling_agent": Use this to make a phone call to a business when no online booking is available, or if the user specifically requests a call. This can be a primary action if it's the most direct route.
 """

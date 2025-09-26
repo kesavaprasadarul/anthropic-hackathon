@@ -10,6 +10,14 @@ from typing import List, Dict, Any, Optional, Callable, Awaitable
 from litellm import acompletion  # async, provider-agnostic chat API
 
 from agents.MOCKS import mock_browser_agent, mock_calling_agent, AgentOutput
+
+try:
+    from agents.browser_agent import browser_agent as browser_module  # type: ignore
+except Exception as import_error:  # pragma: no cover - defensive fallback
+    browser_module = None  # type: ignore
+    BROWSER_AGENT_IMPORT_ERROR = import_error
+else:
+    BROWSER_AGENT_IMPORT_ERROR = None
 import agents.web_search.booking_agent as booking_agent
 import agents.web_search.search_agent as search_agent
 from database.models import ProcessStep
@@ -21,6 +29,12 @@ if PHONE_CALLS_DIR.exists():
     phone_calls_path = str(PHONE_CALLS_DIR)
     if phone_calls_path not in sys.path:
         sys.path.append(phone_calls_path)
+
+BROWSER_AGENT_DIR = Path(__file__).resolve().parent.parent / "agents" / "browser_agent"
+if BROWSER_AGENT_DIR.exists():
+    browser_agent_path = str(BROWSER_AGENT_DIR)
+    if browser_agent_path not in sys.path:
+        sys.path.append(browser_agent_path)
 
 try:
     from calling_agent import CallingModuleAgent  # type: ignore
@@ -52,6 +66,9 @@ if 'CallingModuleAgent' in locals() and CallingModuleAgent is not None:  # type:
         CALLING_AGENT_INIT_ERROR = exc
 else:
     CALLING_AGENT_INIT_ERROR = CALLING_AGENT_IMPORT_ERROR
+
+BROWSER_AGENT_MODULE = browser_module
+BROWSER_AGENT_INIT_ERROR: Optional[Exception] = BROWSER_AGENT_IMPORT_ERROR
 
 
 def _prompt_only_schema(tool_name: str, description: str) -> Dict[str, Any]:
@@ -109,6 +126,106 @@ def _async_prompt_invoker(func: Callable[[str], Any], label: str) -> Callable[[D
         return _normalize_agent_output(result)
 
     return _invoke
+
+def _normalize_browser_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Browser agent task_payload must be a JSON object.")
+
+    for field in ("business", "user", "intent"):
+        if field not in payload:
+            raise ValueError(f"Browser agent payload is missing '{field}'.")
+
+    business = payload.get("business")
+    if not isinstance(business, dict):
+        raise ValueError("Browser agent payload 'business' must be an object.")
+    if not str(business.get("name", "")).strip():
+        raise ValueError("Browser agent payload business.name is required.")
+    business.setdefault("website", "")
+    if "phone" in business and business["phone"] is not None:
+        business["phone"] = str(business["phone"]).strip()
+
+    user = payload.get("user")
+    if not isinstance(user, dict):
+        raise ValueError("Browser agent payload 'user' must be an object.")
+    if not str(user.get("name", "")).strip():
+        raise ValueError("Browser agent payload user.name is required.")
+    email = user.get("email")
+    phone = user.get("phone")
+    if not email and not phone:
+        raise ValueError("Browser agent payload requires user.email or user.phone for contact.")
+    if email is not None:
+        user["email"] = str(email).strip()
+    if phone is not None:
+        user["phone"] = str(phone).strip()
+
+    intent = str(payload.get("intent", "")).lower().strip()
+    if intent not in {"reserve", "info", "recommend"}:
+        raise ValueError(
+            "Browser agent payload 'intent' must be one of: reserve, info, recommend."
+        )
+    payload["intent"] = intent
+
+    if intent == "reserve":
+        reservation = payload.get("reservation")
+        if not isinstance(reservation, dict):
+            raise ValueError(
+                "Reservation intent requires a 'reservation' object with date, time_window, and party_size."
+            )
+
+        missing_fields = [key for key in ("date", "time_window", "party_size") if not reservation.get(key)]
+        if missing_fields:
+            raise ValueError(
+                "Reservation payload is missing required fields: " + ", ".join(missing_fields)
+            )
+
+        time_window = reservation.get("time_window")
+        if not isinstance(time_window, dict):
+            raise ValueError("Reservation time_window must be an object with start_time/end_time.")
+
+        start_time = time_window.get("start_time")
+        end_time = time_window.get("end_time")
+        if not start_time or not end_time:
+            raise ValueError("Reservation time_window requires both start_time and end_time (HH:MM).")
+        time_window["start_time"] = str(start_time).strip()
+        time_window["end_time"] = str(end_time).strip()
+
+        try:
+            party_size = int(reservation["party_size"])
+        except (TypeError, ValueError):
+            raise ValueError("Reservation party_size must be an integer.") from None
+        if party_size < 1:
+            raise ValueError("Reservation party_size must be at least 1.")
+        reservation["party_size"] = party_size
+
+    elif intent == "info":
+        info = payload.get("info")
+        if not isinstance(info, dict):
+            raise ValueError("Info intent requires an 'info' object with info_type.")
+        info_type = str(info.get("info_type", "")).strip().lower()
+        if not info_type:
+            raise ValueError(
+                "Info payload must include info.info_type (opening_hours, pricing, dietary_information, availability)."
+            )
+        info["info_type"] = info_type
+
+    elif intent == "recommend":
+        recommend = payload.get("recommend")
+        if not isinstance(recommend, dict):
+            raise ValueError("Recommend intent requires a 'recommend' object.")
+        user_query = str(recommend.get("user_query", "")).strip()
+        area = str(recommend.get("area", "")).strip()
+        budget = recommend.get("budget")
+        if not user_query or not area or budget is None:
+            raise ValueError("Recommend payload must include user_query, area, and budget.")
+        recommend["user_query"] = user_query
+        recommend["area"] = area
+        try:
+            recommend["budget"] = int(budget)
+        except (TypeError, ValueError):
+            raise ValueError("Recommend budget must be an integer.") from None
+
+    return payload
+
 
 def _normalize_call_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(payload, dict) or _CALLING_PAYLOAD_NORMALIZER is None:
@@ -194,6 +311,51 @@ def _normalize_call_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return payload
 
 
+async def _invoke_browser_agent(args: Dict[str, Any], default_prompt: str) -> AgentOutput:
+    payload_raw = args.get("task_payload")
+    if payload_raw is None:
+        payload_raw = args.get("prompt", default_prompt)
+
+    if isinstance(payload_raw, dict):
+        task_payload = payload_raw
+    else:
+        payload_text = str(payload_raw).strip()
+        try:
+            task_payload = json.loads(payload_text)
+        except json.JSONDecodeError as exc:
+            message = "Browser agent expects 'task_payload' to be a JSON object string describing the automation request."
+            return AgentOutput(status="failed", error=f"{message} JSON error: {exc}")
+        if not isinstance(task_payload, dict):
+            return AgentOutput(status="failed", error="Browser agent payload must be a JSON object.")
+
+    try:
+        task_payload = _normalize_browser_payload(task_payload)
+    except ValueError as exc:
+        return AgentOutput(status="failed", error=f"Browser agent payload error: {exc}")
+
+    if BROWSER_AGENT_MODULE is None:
+        fallback_reason = (
+            f"Real browser agent unavailable ({BROWSER_AGENT_INIT_ERROR})" if BROWSER_AGENT_INIT_ERROR else "Real browser agent unavailable"
+        )
+        print(f"[Executor] {fallback_reason}. Falling back to mock browser agent.")
+        return await mock_browser_agent(args.get("prompt", default_prompt))
+
+    try:
+        response = await BROWSER_AGENT_MODULE.execute_browser_automation(task_payload)
+    except Exception as exc:
+        return AgentOutput(status="failed", error=f"Browser automation error: {exc}")
+
+    if hasattr(response, "model_dump"):
+        response_dict = response.model_dump()
+    elif isinstance(response, dict):
+        response_dict = response
+    else:
+        response_dict = {"status": "completed", "result": str(response)}
+
+    response_text = json.dumps(response_dict, ensure_ascii=False)
+    return AgentOutput(status="completed", result=response_text)
+
+
 async def _invoke_calling_agent(args: Dict[str, Any], default_prompt: str) -> AgentOutput:
     payload_raw = args.get("task_payload")
     if payload_raw is None:
@@ -230,6 +392,106 @@ async def _invoke_calling_agent(args: Dict[str, Any], default_prompt: str) -> Ag
 
     response_text = json.dumps(response_dict, ensure_ascii=False)
     return AgentOutput(status="completed", result=response_text)
+
+BROWSER_AGENT_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "mock_browser_agent",
+        "description": (
+            "Drive the real Browser Automation module to gather information, make reservations, or provide recommendations. "
+            "Always supply a structured `task_payload` that includes business, user contact, intent, and the corresponding intent payload. "
+            "Example reservation payload: {\"business\":{\"name\":\"Augustiner Haidhausen\",\"website\":\"\"},"
+            "\"user\":{\"name\":\"Maria Musterfrau\",\"email\":\"h@g.com\"},\"intent\":\"reserve\","
+            "\"reservation\":{\"date\":\"2025-09-27\",\"time_window\":{\"start_time\":\"19:00\",\"end_time\":\"20:00\"},\"party_size\":3}}"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_payload": {
+                    "type": "object",
+                    "description": (
+                        "Browser automation request mirroring the router schema. Must include `business`, `user`, and `intent`."
+                    ),
+                    "required": ["business", "user", "intent"],
+                    "properties": {
+                        "business": {
+                            "type": "object",
+                            "required": ["name"],
+                            "properties": {
+                                "name": {"type": "string", "description": "Target business name."},
+                                "website": {"type": "string", "description": "Website URL (empty string allowed)."},
+                                "phone": {"type": "string"},
+                                "timezone": {"type": "string"},
+                            },
+                        },
+                        "user": {
+                            "type": "object",
+                            "required": ["name"],
+                            "properties": {
+                                "name": {"type": "string", "description": "Requestor name."},
+                                "email": {"type": "string", "description": "Contact email (required when phone missing)."},
+                                "phone": {"type": "string", "description": "Contact phone (required when email missing)."},
+                            },
+                        },
+                        "intent": {
+                            "type": "string",
+                            "enum": ["reserve", "info", "recommend"],
+                        },
+                        "reservation": {
+                            "type": "object",
+                            "description": "Include when intent='reserve'.",
+                            "properties": {
+                                "date": {"type": "string", "description": "Reservation date (YYYY-MM-DD)."},
+                                "time_window": {
+                                    "type": "object",
+                                    "required": ["start_time", "end_time"],
+                                    "properties": {
+                                        "start_time": {"type": "string", "description": "HH:MM"},
+                                        "end_time": {"type": "string", "description": "HH:MM"},
+                                    },
+                                },
+                                "party_size": {"type": "integer", "minimum": 1},
+                                "duration_minutes": {"type": "integer"},
+                                "notes": {"type": "string"},
+                                "preferences": {"type": "string"},
+                                "budget": {"type": ["number", "string", "null"]},
+                            },
+                        },
+                        "info": {
+                            "type": "object",
+                            "description": "Include when intent='info'.",
+                            "properties": {
+                                "info_type": {
+                                    "type": "string",
+                                    "enum": ["opening_hours", "pricing", "dietary_information", "availability"],
+                                },
+                                "context_date": {"type": "string"},
+                                "context_time": {"type": "string"},
+                            },
+                        },
+                        "recommend": {
+                            "type": "object",
+                            "description": "Include when intent='recommend'.",
+                            "properties": {
+                                "user_query": {"type": "string"},
+                                "area": {"type": "string"},
+                                "budget": {"type": "integer"},
+                            },
+                        },
+                        "policy": {"type": "object"},
+                        "locale": {"type": "string"},
+                        "idempotency_key": {"type": ["string", "null"]},
+                    },
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Optional natural-language context (ignored by the real agent, kept for backward compatibility).",
+                },
+            },
+            "required": ["task_payload"],
+        },
+    },
+}
 
 CALLING_AGENT_SCHEMA = {
     "type": "function",
@@ -308,11 +570,8 @@ AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {
         "invoke": _sync_prompt_invoker(SEARCH_AGENT.search, "Search agent"),
     },
     "mock_browser_agent": {
-        "schema": _prompt_only_schema(
-            "mock_browser_agent",
-            "Simulate browser automation for web forms (mock).",
-        ),
-        "invoke": _async_prompt_invoker(mock_browser_agent, "Browser agent"),
+        "schema": BROWSER_AGENT_SCHEMA,
+        "invoke": _invoke_browser_agent,
     },
     "mock_booking_agent": {
         "schema": _prompt_only_schema(

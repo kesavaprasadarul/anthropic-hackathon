@@ -9,5 +9,6 @@ requests
 smolagents
 beautifulsoup4
 lxml
+browser-use==0.7.9
 # or openai, if you prefer
 
