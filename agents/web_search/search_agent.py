@@ -3,10 +3,10 @@ import json
 import requests
 from typing import List, Dict, Any, Optional
 
-from globals import *
+from .globals import *
 from smolagents import Tool, CodeAgent
 from smolagents.models import LiteLLMModel
-from tools import CombinedReservationSearchTool
+from .tools import CombinedReservationSearchTool
 
 
 PLACES_FIELDS = (
@@ -23,7 +23,7 @@ def build_agent() -> CodeAgent:
     """
     model = LiteLLMModel(
         model_id="gemini/gemini-2.5-flash-lite",
-        api_key=os.getenv("GEMINI_KEY"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
     )
 
     tools = [CombinedReservationSearchTool()]

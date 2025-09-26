@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 from smolagents import Tool, CodeAgent
 from smolagents.models import LiteLLMModel
 
-from tools import GoogleCalendarCreateEventTool, GoogleCalendarAvailabilityTool
+from .tools import GoogleCalendarCreateEventTool, GoogleCalendarAvailabilityTool
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -79,7 +79,7 @@ class BookingAgent:
             
             model = LiteLLMModel(
                 model_id="gemini/gemini-2.5-flash-lite",
-                api_key=os.getenv("GEMINI_KEY"),
+                api_key=os.getenv("GOOGLE_API_KEY"),
             )
             tools = [
                 GoogleCalendarAvailabilityTool(self._token),
@@ -173,25 +173,25 @@ class BookingAgent:
 # -------------------------
 # Lazy singleton instance for easy importing
 # -------------------------
-def get_booking_agent() -> BookingAgent:
-    """Lazy initialization of the global booking agent instance"""
-    if not hasattr(get_booking_agent, '_instance'):
-        get_booking_agent._instance = BookingAgent()
-    return get_booking_agent._instance
+# def get_booking_agent() -> BookingAgent:
+#     """Lazy initialization of the global booking agent instance"""
+#     if not hasattr(get_booking_agent, '_instance'):
+#         get_booking_agent._instance = BookingAgent()
+#     return get_booking_agent._instance
 
-# -------------------------
-# Convenience functions for backward compatibility
-# -------------------------
-def create_appointment(start_iso: str, end_iso: str, summary: str, timezone: str,
-                      location: str = "TBD", description: str = "Auto-created by agent", 
-                      calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Convenience function to create an appointment"""
-    return get_booking_agent().create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
+# # -------------------------
+# # Convenience functions for backward compatibility
+# # -------------------------
+# def create_appointment(start_iso: str, end_iso: str, summary: str, timezone: str,
+#                       location: str = "TBD", description: str = "Auto-created by agent", 
+#                       calendar_id: str = "primary", attendees: Optional[List[str]] = None) -> Dict[str, Any]:
+#     """Convenience function to create an appointment"""
+#     return get_booking_agent().create_appointment(start_iso, end_iso, summary, timezone, location, description, calendar_id, attendees)
 
-def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
-                      timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
-    """Convenience function to check availability"""
-    return get_booking_agent().check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
+# def check_availability(days_ahead: int = 7, calendar_ids: Optional[List[str]] = None,
+#                       timezone: str = "UTC", work_start_hour: int = 9, work_end_hour: int = 18) -> Dict[str, Any]:
+#     """Convenience function to check availability"""
+#     return get_booking_agent().check_availability(days_ahead, calendar_ids, timezone, work_start_hour, work_end_hour)
 
 # -------------------------
 # Debug Main Function

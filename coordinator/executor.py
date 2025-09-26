@@ -8,13 +8,19 @@ from typing import List, Dict, Any, Optional
 from litellm import acompletion  # async, provider-agnostic chat API
 
 from agents.MOCKS import mock_search_agent, mock_browser_agent, mock_calendar_agent, mock_calling_agent, AgentOutput
+import agents.web_search.booking_agent as booking_agent
+import agents.web_search.search_agent as search_agent
 from database.models import ProcessStep
 from .planner import Planner
 
+BOOKING_AGENT = booking_agent.BookingAgent()
+SEARCH_AGENT = search_agent.PlaceSearchAgent()
+
 AVAILABLE_TOOLS = {
-    "mock_search_agent": mock_search_agent,
+    "mock_search_agent": SEARCH_AGENT.search,
     "mock_browser_agent": mock_browser_agent,
-    "mock_calendar_agent": mock_calendar_agent,
+    "mock_booking_agent": BOOKING_AGENT.create_appointment,
+    "mock_availability_agent": BOOKING_AGENT.check_availability,
     "mock_calling_agent": mock_calling_agent,
 }
 
@@ -23,21 +29,14 @@ class Executor:
         self.process_id = process_id
         self.original_prompt = original_prompt
         self.run_history = run_history
-        # Choose any provider/model via env:
-        #   OpenAI:   MODEL_NAME=gpt-4o-mini + OPENAI_API_KEY
-        #   Anthropic: MODEL_NAME=anthropic/claude-3-5-sonnet + ANTHROPIC_API_KEY
-        #   Vertex:   MODEL_NAME=vertex_ai/gemini-1.5-flash + VERTEXAI_* envs
-        #   Gemini AI Studio: MODEL_NAME=gemini/gemini-1.5-flash + GEMINI_API_KEY
         self.model_name = os.getenv("MODEL_NAME", "gemini/gemini-2.5-flash-lite")
 
     async def _execute_step(self, step: ProcessStep, context: str) -> AgentOutput:
-        # Step now receives context from previous steps
         prompt = f"Context from previous steps:\n{context}\n\nYour task now:\n{step.prompt_message}"
         
         print(f"\n[{self.process_id}] --- Executing Step: '{step.step_name}' ---")
         print(f"[{self.process_id}] Prompt for model: '{prompt}'")
 
-        # Build OpenAI-style tool schema (LiteLLM translates for supported providers)
         tools_schema = []
         for tool_name in AVAILABLE_TOOLS.keys():
             tools_schema.append({

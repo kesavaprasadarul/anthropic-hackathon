@@ -1,7 +1,7 @@
 import json
 from smolagents import Tool
 from typing import List, Dict, Any, Tuple, Optional
-from globals import GOOGLE_API_KEY
+from .globals import GOOGLE_MAPS_KEY
 import requests
 import datetime as dt
 from zoneinfo import ZoneInfo
@@ -165,7 +165,7 @@ class CombinedReservationSearchTool(Tool):
             }
         headers = {
             "Content-Type": "application/json",
-            "X-Goog-Api-Key": GOOGLE_API_KEY,
+            "X-Goog-Api-Key": GOOGLE_MAPS_KEY,
             "X-Goog-FieldMask": PLACES_FIELDS,
         }
         resp = requests.post(
