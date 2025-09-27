@@ -225,7 +225,11 @@ export function useElevenLabsConversation(): ConversationHook {
       
       // Generate signed URL directly for the conversation
       const agentId = 'agent_4201k623jy58ehzat15qh2pktbtb'
-      const apiKey = 'sk_12e21f2dc9aa3ad1261f9ed020ca3254c2f84a5cd90b0f30'
+      const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY
+      
+      if (!apiKey) {
+        throw new Error('ElevenLabs API key not found. Please set VITE_ELEVENLABS_API_KEY environment variable.')
+      }
       
       const response = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,

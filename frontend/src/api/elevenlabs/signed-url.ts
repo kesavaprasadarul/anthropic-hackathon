@@ -20,9 +20,15 @@ export async function POST(request: Request): Promise<Response> {
       })
     }
 
-    // Use your provided API key directly for now
-    // In production, this should come from environment variables
-    const apiKey = 'sk_12e21f2dc9aa3ad1261f9ed020ca3254c2f84a5cd90b0f30'
+    // Get API key from environment variables
+    const apiKey = process.env.ELEVENLABS_API_KEY
+    
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: 'ElevenLabs API key not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
     
     const response = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
