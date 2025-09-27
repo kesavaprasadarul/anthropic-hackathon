@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Jarvis AI Assistant Design System - Futuristic Dark Theme */
+
+@layer base {
+  :root {
+    /* Jarvis Space Gradient Background */
+    --space-dark: 220 25% 6%;      /* #0A0F1F */
+    --space-darker: 220 20% 10%;   /* #111827 */
+    --space-light: 220 15% 15%;    /* Card backgrounds */
+    
+    /* Neon Accent Colors */
+    --neon-cyan: 188 100% 42%;     /* #06B6D4 */
+    --neon-blue: 217 91% 60%;      /* #3B82F6 */
+    --neon-magenta: 292 84% 61%;   /* #D946EF */
+    --neon-teal: 178 100% 47%;     /* #00D9FF */
+    
+    /* Text Colors */
+    --text-primary: 210 17% 98%;   /* #F9FAFB */
+    --text-secondary: 215 20% 65%; /* Muted text */
+    --text-tertiary: 215 15% 45%;  /* Subtle text */
+    
+    /* Semantic Colors */
+    --success: 158 64% 52%;        /* Success green */
+    --warning: 43 96% 56%;         /* Warning amber */
+    --error: 0 84% 60%;            /* Error red */
+    
+    /* Jarvis Sphere States */
+    --sphere-idle: var(--neon-cyan);
+    --sphere-listening: var(--neon-teal);
+    --sphere-thinking: var(--neon-blue);
+    --sphere-speaking: var(--neon-magenta);
+    
+    /* Design System Mapping */
+    --background: var(--space-dark);
+    --foreground: var(--text-primary);
+    
+    --card: var(--space-light);
+    --card-foreground: var(--text-primary);
+    
+    --popover: var(--space-darker);
+    --popover-foreground: var(--text-primary);
+    
+    --primary: var(--neon-cyan);
+    --primary-foreground: var(--space-dark);
+    
+    --secondary: var(--space-light);
+    --secondary-foreground: var(--text-primary);
+    
+    --muted: var(--space-light);
+    --muted-foreground: var(--text-secondary);
+    
+    --accent: var(--neon-blue);
+    --accent-foreground: var(--text-primary);
+    
+    --destructive: var(--error);
+    --destructive-foreground: var(--text-primary);
+    
+    --border: 220 15% 20%;
+    --input: var(--space-light);
+    --ring: var(--neon-cyan);
+    
+    --radius: 1rem;
+    
+    /* Sidebar Colors */
+    --sidebar-background: var(--space-darker);
+    --sidebar-foreground: var(--text-primary);
+    --sidebar-primary: var(--neon-cyan);
+    --sidebar-primary-foreground: var(--space-dark);
+    --sidebar-accent: var(--space-light);
+    --sidebar-accent-foreground: var(--text-primary);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--neon-cyan);
+    
+    /* Gradients */
+    --gradient-space: linear-gradient(135deg, hsl(var(--space-dark)), hsl(var(--space-darker)));
+    --gradient-sphere: radial-gradient(circle, hsl(var(--neon-cyan) / 0.2), transparent);
+    --gradient-neon: linear-gradient(45deg, hsl(var(--neon-cyan)), hsl(var(--neon-blue)));
+    --gradient-glow: radial-gradient(circle, hsl(var(--neon-cyan) / 0.3), transparent);
+    
+    /* Shadows & Glows */
+    --shadow-neon: 0 0 20px hsl(var(--neon-cyan) / 0.5);
+    --shadow-card: 0 8px 32px hsl(220 25% 4% / 0.5);
+    --glow-sphere: 0 0 40px hsl(var(--sphere-idle) / 0.6);
+    --glow-text: 0 0 10px hsl(var(--neon-cyan) / 0.8);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    background: var(--gradient-space);
+    min-height: 100vh;
+  }
+  
+  /* Jarvis UI Components */
+  .jarvis-glow {
+    box-shadow: var(--shadow-neon);
+    transition: var(--transition-smooth);
+  }
+  
+  .jarvis-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(10px);
+  }
+  
+  .jarvis-text-glow {
+    text-shadow: var(--glow-text);
+  }
+  
+  .jarvis-sphere-glow {
+    box-shadow: var(--glow-sphere);
+  }
+  
+  /* Sphere animation keyframes */
+  @keyframes sphere-float {
+    0%, 100% { transform: translateY(0px) rotateY(0deg); }
+    33% { transform: translateY(-10px) rotateY(120deg); }
+    66% { transform: translateY(-5px) rotateY(240deg); }
+  }
+  
+  @keyframes sphere-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+  }
+  
+  @keyframes particle-orbit {
+    0% { transform: rotate(0deg) translateX(50px) rotate(0deg); }
+    100% { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+  }
+  
+  @keyframes neon-glow {
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 10px hsl(var(--neon-cyan))); }
+    50% { filter: brightness(1.2) drop-shadow(0 0 20px hsl(var(--neon-cyan))); }
+  }
+  
+  /* Mobile-first responsive utilities */
+  .jarvis-mobile-padding {
+    @apply px-4 py-6 md:px-6 md:py-8;
+  }
+  
+  .jarvis-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+}
